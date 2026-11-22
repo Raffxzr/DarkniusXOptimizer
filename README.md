@@ -106,4 +106,8 @@ DarkniusXOptimizer/
 ## 👤 Credits & License
 
 - **Developer**: [Raffxzr](https://github.com/Raffxzr)
-- **Base Components**: Flush RAM Reborn (`@WeAreRavenS`), Cache Cleaner (`@taamarin`), and GMS Doze logic contributors.
+- **Flush RAM Reborn**: [@WeAreRavenS](https://t.me/WeAreRavenS)
+- **Cache Cleaner**: [taamarin/cleaner](https://github.com/taamarin/cleaner)
+- **Thermal Killer**: Based on [Licking-Thermal](https://github.com/fuckyoustan/Licking-Thermal/releases) by [@fuckyoustan](https://github.com/fuckyoustan)
+- **GMS Doze**: Based on [Extreme GMS Doze](https://github.com/Skyghost090/Extreme-Gms-Doze) by [@Skyghost090](https://github.com/Skyghost090) and [Universal GMS Doze](https://github.com/gloeyisk/universal-gms-doze) by [@gloeyisk](https://github.com/gloeyisk)
+
