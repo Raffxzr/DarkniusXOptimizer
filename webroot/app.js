@@ -1,6 +1,37 @@
 (() => {
-  const M3_ACCENTS = ['#e5988e', '#8ab4f8', '#81c995', '#cfbcff', '#f6aea9', '#fdd663'];
-  let accentIndex = 0;
+  // Curated AMOLED Dark Red & Crimson palette
+  const M3_ACCENTS = ['#e53935', '#ff3344', '#d32f2f', '#c62828', '#ff5252', '#b71c1c'];
+  const STORAGE_KEY = 'raff_accent';
+  const DEFAULT_ACCENT = '#e53935';
+
+  function getStoredAccent() {
+    try {
+      return localStorage.getItem(STORAGE_KEY) || DEFAULT_ACCENT;
+    } catch (_) {
+      return DEFAULT_ACCENT;
+    }
+  }
+
+  function setStoredAccent(hex) {
+    try {
+      localStorage.setItem(STORAGE_KEY, hex);
+    } catch (_) {}
+  }
+
+  function applyAccentColor(hexOrColor) {
+    if (!hexOrColor || hexOrColor === 'AccentColor') {
+      hexOrColor = DEFAULT_ACCENT;
+    }
+    const formatted = /^[0-9a-fA-F]{6}$/.test(hexOrColor) ? `#${hexOrColor}` : hexOrColor;
+    document.documentElement.style.setProperty('--active-accent', formatted);
+  }
+
+  // Terapkan accent color secepat mungkin (synchronous) saat script pertama dieksekusi
+  // untuk mencegah flash layar gelap / unstyled accent
+  let currentAccent = getStoredAccent();
+  let accentIndex = M3_ACCENTS.indexOf(currentAccent);
+  if (accentIndex === -1) accentIndex = 0;
+  applyAccentColor(currentAccent);
 
   let pkgState = {
     system: [],
@@ -131,12 +162,6 @@
     }
   }
 
-  function applyAccentColor(hexOrColor) {
-    if (!hexOrColor) return;
-    const formatted = /^[0-9a-fA-F]{6}$/.test(hexOrColor) ? `#${hexOrColor}` : hexOrColor;
-    document.documentElement.style.setProperty('--active-accent', formatted);
-  }
-
   function runShell(cmd) {
     return new Promise((resolve) => {
       if (hasKsuBridge()) {
@@ -255,10 +280,12 @@
     });
   });
 
-  // Tombol ganti palet warna aksen Material You
+  // Tombol ganti palet warna aksen AMOLED Dark Red
   document.getElementById('accent-cycle-btn').addEventListener('click', () => {
     accentIndex = (accentIndex + 1) % M3_ACCENTS.length;
-    applyAccentColor(M3_ACCENTS[accentIndex]);
+    const chosen = M3_ACCENTS[accentIndex];
+    applyAccentColor(chosen);
+    setStoredAccent(chosen);
   });
 
   // Tombol Clear di masing-masing Terminal
@@ -303,12 +330,6 @@
       document.getElementById('stat-service').textContent = data.service || 'Unknown';
       document.getElementById('stat-users').textContent = data.users ? data.users.replace(/,/g, ', ') : '0:Owner';
       populateUserDropdowns(data.users || '0:Owner');
-
-      if (data.accent) {
-        applyAccentColor(data.accent);
-      } else if (CSS.supports('color', 'AccentColor')) {
-        applyAccentColor('AccentColor');
-      }
     }
   }
 
