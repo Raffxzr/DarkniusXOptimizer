@@ -1,21 +1,39 @@
-# ⚡ RaffOptimizer
+# ⚡ DarkniusX Optimizer
 
 [![Build](https://github.com/Raffxzr/RaffOptimizer/actions/workflows/build.yml/badge.svg)](https://github.com/Raffxzr/RaffOptimizer/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/Raffxzr/RaffOptimizer)](https://github.com/Raffxzr/RaffOptimizer/releases/latest)
 
-**RaffOptimizer** is an all-in-one device maintenance module for **Magisk, KernelSU, and APatch**. It combines a **Multi-Mode RAM Flusher** and an **Auto/Manual Cache Cleaner** with a **Multi-User App Freezer**, **Systemless APK Debloater**, and a **Material You (M3) Dual-Mode WebUI**.
+**DarkniusX Optimizer** (formerly *RaffOptimizer*) is a comprehensive, low-overhead device maintenance and gaming performance suite for **Magisk, KernelSU, KernelSU-Next, and APatch**.
+
+It combines advanced gaming graphics scaling, thermal unthrottling, universal GMS deep sleep, storage fstrim, kernel virtual memory tuning, multi-mode RAM flushing with custom whitelisting, cache cleaning, multi-user APK freezing/debloating, and a sleek **AMOLED Dark Red Material You (M3) WebUI**.
 
 ---
 
 ## ✨ Key Features
 
-- **🎨 Material You (M3) Dynamic WebUI**: Clean, modern interface with automatic Android system accent color synchronization (Monet palette), adaptive dark/light themes, uniform pill action buttons, and built-in accent presets.
-- **🖥️ Live Execution Consoles**: Real-time embedded terminal output in the **Optimizer**, **Freeze APK**, and **Debloat APK** tabs to monitor running scripts (`raff-flush`, `cleaner`, `raff-freeze`, and `raff-debloat`) directly from the UI.
-- **🚀 Multi-Mode RAM Flusher**: Free up memory with 4 profiles (`safe`, `aggressive`, `extreme`, `custom`) powered by both 32-bit `flush` binaries and a 64-bit native kernel/AM fallback engine.
-- **🧹 Auto & Manual Cache Cleaner**: Clears app `cache` and `code_cache` manually or automatically every 6 hours via `crond` whenever total cache exceeds **1 GB**.
-- **❄️ Multi-User App Freezer**: Freeze (`disable-user`) or unfreeze (`enable`) apps across **all Android users** (`User 0`, `User 10` Work Profile / Dual Apps, etc.) or per specific user.
-- **🗑️ System & User APK Debloater**: Uninstall pre-installed bloatware (with optional Magisk `.replace` systemless masking) or user apps, and restore them anytime.
-- **🌐 Dual-Mode WebUI Bridge**: Works natively in **KernelSU / KernelSU-Next / APatch / MMRL** (`window.ksu.exec`) or in any browser via the local CGI server at `http://127.0.0.1:8899`.
+- **🎮 Pixel LOD Scaler (Grafik MC)**:
+  - Dynamically forces the ANGLE OpenGL/Vulkan driver texture Level of Detail offset (+4) for massive GPU load reduction and sustained FPS in heavy 3D titles (Free Fire, Free Fire MAX, Mobile Legends, PUBG Mobile / BGMI, or any custom app package).
+  - Supports targeted per-package overrides or global system-wide enforcement.
+- **🔥 Darknius Thermal Killer**:
+  - Terminates restrictive vendor thermal throttling daemons (`mi_thermald`, `thermal-engine`, `thermald`) and unconstrains thermal zone governors to prevent thermal frequency drops during extended gaming sessions.
+- **⚡ Smart GMS Doze & Screen-Off Deep Sleep**:
+  - Universal sysconfig XML patcher supporting **Android 10 up to Android 17+**, treating Google Play Services as a standard battery-optimized application.
+  - Fixes the notorious 100% CPU lockup and battery drain caused by older GMS doze scripts upon device wake-up.
+  - Event-driven screen-off deep sleep daemon (`darknius-doze`) that engages `cmd deviceidle force-idle deep` with an 8-second grace period and zero disk I/O.
+- **🧹 Universal Storage Fstrim**:
+  - Trims dirty and discarded flash storage blocks across `/data`, `/cache`, and `/system` to maintain optimal NAND flash read/write speeds and reduce I/O wait times.
+- **⚙️ Kernel VM & ZRAM Tuner**:
+  - Quick-switch Linux virtual memory presets: `gaming` (ZRAM swappiness 160, cache pressure 50), `balance` (swappiness 60, pressure 100), and `multitasking` (swappiness 120, pressure 80).
+- **🛡️ Custom RAM Flush Whitelist**:
+  - Free up memory before gaming using 4 flushing profiles (`safe`, `aggressive`, `extreme`, `custom`).
+  - Whitelist custom background apps (`/data/adb/darkniusx/config/whitelist.list`) such as music players, discord, or messengers to keep them running during deep memory purges.
+- **🧼 Auto & Manual Cache Cleaner**:
+  - Clean app `cache` and `code_cache` directories on demand or automatically via background service with customizable size thresholds (500MB, 1GB, 2GB, 3GB) and cron intervals.
+- **❄️ Multi-User APK Freezer & Debloater**:
+  - Freeze (`disable-user`) or debloat system and user apps across all profiles (`User 0`, `User 10` Work Profile / Dual Apps) with color-coded safety indicators (🟢 Safe, 🟡 Caution, 🔴 Critical).
+- **🎨 AMOLED Dark Red Material You WebUI**:
+  - True pitch-black AMOLED UI (`#000000`) with high-contrast dark red accents (`#e53935`), dynamic auto-marquee text scrolling, and real-time execution consoles.
+  - Operates via native root bridge (`window.ksu.exec`) in KernelSU/APatch/MMRL or via the built-in HTTP CGI server at `http://127.0.0.1:8899`.
 
 ---
 
@@ -23,23 +41,33 @@
 
 | Feature | Command | Description |
 | :--- | :--- | :--- |
-| **Help Menu** | `su -c raff` | Show quick command summary |
-| **Clean Cache** | `su -c cleaner` | Clean all app caches immediately |
-| **Flush RAM** | `su -c raff-flush [mode]` | Modes: `safe`, `aggressive`, `extreme`, `custom` (or `flush`, `flush2`, `flush3`, `flush5`) |
-| **Freeze APK** | `su -c raff-freeze freeze <pkg> --user all` | Freeze app for `all` users or a specific ID (e.g., `0`, `10`) |
-| **Unfreeze APK** | `su -c raff-freeze unfreeze <pkg> --user all` | Re-enable a frozen app (`unfreeze-all` to restore all) |
-| **Remove APK** | `su -c raff-debloat remove <pkg> --user all --systemless` | Remove system/user app (`--systemless` masks system app folder) |
-| **Restore APK** | `su -c raff-debloat restore <pkg> --user all` | Restore a previously removed system app |
-| **Open WebUI** | `su -c raff-webui open` | Start and open the WebUI in your default browser |
+| **Main Menu** | `su -c darknius` (or `dx`) | Show interactive helper and status summary |
+| **Pixel LOD Scaler** | `su -c darknius-lod enable [pkg]` | Enable LOD offset +4 (Grafik MC) for specific pkg or `all` |
+| **Pixel LOD Revert** | `su -c darknius-lod disable` | Restore stock texture LOD settings |
+| **Thermal Killer** | `su -c darknius-thermal enable` | Terminate thermal throttling daemons |
+| **Thermal Restore** | `su -c darknius-thermal disable` | Restart stock vendor thermal daemons |
+| **Storage Fstrim** | `su -c darknius-fstrim` | Trim `/data`, `/cache`, and `/system` partitions |
+| **Kernel VM Tuner** | `su -c darknius-vm set <gaming\|balance\|multitasking>` | Apply kernel swappiness & VFS cache pressure |
+| **Deep Sleep Daemon** | `su -c darknius-doze <start\|stop\|status>` | Manage screen-off smart deep sleep daemon |
+| **Flush RAM** | `su -c darknius-flush [mode]` | Modes: `safe`, `aggressive`, `extreme`, `custom` |
+| **Clean Cache** | `su -c cleaner` | Clean all application caches immediately |
+| **Freeze App** | `su -c darknius-freeze freeze <pkg> --user all` | Freeze app for `all` users or specific user ID |
+| **Unfreeze App** | `su -c darknius-freeze unfreeze <pkg> --user all` | Restore frozen app |
+| **Debloat App** | `su -c darknius-debloat remove <pkg> --user all --systemless` | Debloat app with systemless `.replace` masking |
+| **Restore App** | `su -c darknius-debloat restore <pkg> --user all` | Restore removed debloated system app |
+| **Open WebUI** | `su -c darknius-webui open` | Start and launch the WebUI in your default browser |
+
+*Note: Backward-compatible command aliases (`raff`, `raff-flush`, `raff-freeze`, `raff-debloat`, `raff-webui`) remain available.*
 
 ---
 
 ## 📦 Installation
 
-1. Download the latest `RaffOptimizer-v*.zip` from **Releases**.
+1. Download `DarkniusXOptimizer-v1.5.zip` from **Releases**.
 2. Flash the zip via **Magisk**, **KernelSU**, or **APatch** Manager.
+   - *Automatic Data Migration*: Upgrading from older `RaffOptimizer` versions automatically migrates your configs and debloat lists.
 3. Reboot your device.
-4. Tap **WebUI** / **Action** in your root manager or open `http://127.0.0.1:8899` in your browser.
+4. Launch the **WebUI** via your Root Manager (Action button) or execute `su -c darknius-webui open`.
 
 ---
 
@@ -53,55 +81,29 @@ cd RaffOptimizer
 ./build.sh
 ```
 
-The flashable module is written to `dist/RaffOptimizer-<version>.zip`.
-`build.sh` reads `version` / `versionCode` from `module.prop`, copies the CLI
-scripts from `scripts/` into `system/bin/` while staging, normalises file
-permissions, and verifies that the archive contains every runtime file.
+The flashable module zip is output to `dist/DarkniusXOptimizer-<version>.zip`.
 
-### Repository Layout
+### Repository Structure
 
 ```text
-RaffOptimizer/
-├── build.sh                  # single entry point for packaging
-├── module.prop               # module metadata (version source of truth)
-├── update.json               # OTA manifest, updated by the release workflow
-├── customize.sh              # installer
-├── service.sh / action.sh    # boot + action-button hooks
-├── scripts/                  # single source for every CLI binary
-├── cleaner/                  # cache-cleaner service files
-├── webroot/                  # Material You WebUI
-├── system/priv-app/          # bundled ShowToast.apk
+DarkniusXOptimizer/
+├── build.sh                  # Single entry point packaging pipeline
+├── module.prop               # Module metadata (id=DarkniusXOptimizer)
+├── update.json               # Auto-update manifest for Magisk/KernelSU
+├── customize.sh              # Installer & universal GMS sysconfig patcher
+├── service.sh / action.sh    # Boot services and action button hooks
+├── scripts/                  # Sources for darknius CLI binaries
+├── cleaner/                  # Cache cleaner service & inotify daemon
+├── webroot/                  # AMOLED Dark Red Material You WebUI
+├── system/priv-app/          # Bundled ShowToast.apk notification helper
 ├── system/xbin/              # 32-bit flush binaries
-├── META-INF/                 # installer metadata
-└── .github/workflows/        # CI + automated releases
+├── META-INF/                 # Flashable zip installer metadata
+└── .github/workflows/        # CI build & automated release pipelines
 ```
-
----
-
-## 🚀 Releasing
-
-Releases are fully automated. Bump `version` / `versionCode` in `module.prop`,
-add the matching section to `CHANGELOG.md`, commit, then push a tag:
-
-```bash
-git tag v1.4
-git push origin main --tags
-```
-
-The **Release** workflow then:
-
-1. verifies that the tag matches `module.prop`,
-2. builds `dist/RaffOptimizer-<version>.zip`,
-3. creates (or updates) the GitHub release with that zip and the changelog,
-4. commits the new `version`, `versionCode`, and `zipUrl` to `update.json`
-   on `main`, so Magisk / KernelSU / APatch auto-update sees the release.
-
-The **Build** workflow runs on every push and pull request to keep the
-packaging pipeline and shell syntax healthy.
 
 ---
 
 ## 👤 Credits & License
 
-- **Author**: [Raffxzr](https://github.com/Raffxzr)
-- **Base Components**: Flush RAM Reborn (`@WeAreRavenS`) & Cache Cleaner (`@taamarin`)
+- **Developer**: [Raffxzr](https://github.com/Raffxzr)
+- **Base Components**: Flush RAM Reborn (`@WeAreRavenS`), Cache Cleaner (`@taamarin`), and GMS Doze logic contributors.

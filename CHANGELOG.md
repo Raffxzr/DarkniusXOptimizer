@@ -1,6 +1,37 @@
-# 📋 RaffOptimizer Changelogs
+# 📋 DarkniusX Optimizer Changelogs
 
-All notable changes, improvements, and fixes to **RaffOptimizer** are documented in this file.
+All notable changes, improvements, and fixes to **DarkniusX Optimizer** (formerly RaffOptimizer) are documented in this file.
+
+---
+
+## [v1.5] - Rebranding to DarkniusX Optimizer & Advanced Performance Engine
+
+### 🚀 Major Highlights & Rebranding
+- **Rebranding to DarkniusX Optimizer**: Fully rebranded the module ID (`DarkniusXOptimizer`), module name (`DarkniusX Optimizer`), data paths (`/data/adb/darkniusx/`), and unified CLI entry points (`darknius`, `dx`, with backward-compatible `raff` alias).
+- **Automated Data & State Migration**: Upgraded `customize.sh` with seamless auto-migration of debloat lists, whitelist configurations, and runtime state from `/data/adb/raffoptimizer/` to `/data/adb/darkniusx/`.
+
+### ✨ New Performance Features
+- **Pixel LOD Scaler (Grafik MC)**:
+  - Added `darknius-lod` CLI and WebUI controls to toggle ANGLE driver texture LOD offset (+4) (`CompileJobIsThreadSafe:LinkJobIsThreadSafe:ForceTextureLodOffset4`).
+  - Supports targeted per-package overrides (Free Fire, Free Fire MAX, Mobile Legends, PUBG / BGMI, custom package names) or system-wide global mode.
+- **Darknius Thermal Killer**:
+  - Added `darknius-thermal` CLI and WebUI switch to terminate vendor thermal throttling daemons (`mi_thermald`, `thermal-engine`, `thermald`) and unconstrain thermal zone governors for sustained peak CPU/GPU clock frequencies without fps drops.
+- **Universal Storage Fstrim**:
+  - Added `darknius-fstrim` multi-partition trimming tool to clean dirty storage blocks across `/data`, `/cache`, and `/system`, maintaining peak NAND flash read/write performance.
+- **Smart GMS Doze & Screen-Off Deep Sleep**:
+  - Implemented universal sysconfig XML patcher in `customize.sh` for Android 10 through Android 17+, allowing Google Play Services to natively sleep without aggressive `pm disable` CPU storms (resolving the 100% CPU lockup found in older GMS doze modules).
+  - Event-driven screen-off deep sleep daemon (`darknius-doze`) that engages deep idle (`cmd deviceidle force-idle deep`) with zero disk I/O spam and an 8-second grace period.
+- **Custom RAM Flush Whitelist**:
+  - Added protected package whitelist (`/data/adb/darkniusx/config/whitelist.list`) integrated into `darknius-flush` to protect critical background apps (music players, messengers, active games) during aggressive or extreme RAM flushes.
+  - Interactive chip-based whitelist manager in the WebUI with instant add and remove actions.
+- **Kernel VM & ZRAM Tuning**:
+  - Added `darknius-vm` with 3 dynamic tuning presets: `gaming` (ZRAM swappiness 160, VFS cache pressure 50), `balance` (swappiness 60, pressure 100), and `multitasking` (swappiness 120, pressure 80).
+
+### 🎨 WebUI Enhancements
+- **Extended System Status Grid**: Real-time monitoring of ZRAM / Swap usage, SoC temperatures, Pixel LOD status, Thermal Killer status, Kernel VM profile, and Deep Sleep daemon state.
+- **Safety Indicators**: Added visual safety badges (🟢 Safe, 🟡 Caution, 🔴 Critical) for both Freeze and Debloat lists to prevent accidental disablement of critical Android framework components.
+- **Auto-Cleaner Scheduler Settings**: User-configurable cleanup thresholds (500MB, 1GB, 2GB, 3GB) and cron intervals (3h, 6h, 12h, 24h) directly from the WebUI.
+- **Aesthetic Refinements**: True AMOLED pitch-black background with dark red accents and uniform button grid alignments (`.button-grid-3`).
 
 ---
 
@@ -58,30 +89,25 @@ All notable changes, improvements, and fixes to **RaffOptimizer** are documented
 ## [v1.1] - Material You WebUI & Live Console Update
 
 ### ✨ Added
-- **Material You (M3) WebUI Redesign**: Completely overhauled the WebUI using Android Material Design 3 guidelines with tonal surfaces, pill-shaped navigation, rounded cards, and clean monochrome SVG icons.
-- **Dynamic System Accent Synchronization**: Automatic detection of the device's Android Monet seed color (`theme_customization_overlay_packages` via Root/CGI bridge and CSS `AccentColor`) with a built-in Material You color preset switcher in the header.
-- **Adaptive Theme Support**: Added automatic Dark and Light mode tonal palettes via `color-mix()` and `prefers-color-scheme`.
-- **Live Execution Consoles (Embedded Terminals)**:
-  - **Optimizer Console**: Real-time script output at the bottom of the Cache Cleaner card to monitor `raff-flush` and `cleaner` executions.
-  - **Freeze Console**: Dedicated live output terminal in the **Freeze APK** tab for `raff-freeze` actions.
-  - **Debloat Console**: Dedicated live output terminal in the **Debloat APK** tab for `raff-debloat` actions.
-- **Clear All Logs Action**: Added a one-tap **Clear All** button in the **Logs** tab and `api.sh` backend (`action=clear_logs`) to reset persistent logs in `/data/adb/raffoptimizer/run/`.
+- **Material You (M3) WebUI Redesign**: Overhauled the WebUI using Android Material Design 3 guidelines with tonal surfaces, pill navigation, and monochrome SVG icons.
+- **Dynamic System Accent Synchronization**: Detection of Android Monet seed color with a built-in Material You color preset switcher in the header.
+- **Live Execution Consoles**: Real-time script output in the Optimizer, Freeze APK, and Debloat APK tabs.
+- **Clear All Logs Action**: Added a one-tap Clear All button in the Logs tab.
 
 ### 🔧 Fixed & Improved
-- **Uniform Button Sizing**: Fixed inconsistent button dimensions across manual input bars and prevented long package names (e.g., `com.google.android.GoogleCameraEngR18F1`) from stretching or deforming action buttons in the package list.
-- **Cleaner Service Non-TTY Output**: Added standard output fallback (`stdout`) to the `log()` function in `cleaner/cleaner.service` so start/stop messages appear properly in the WebUI terminal console.
-- **Multi-User Dropdown Sync**: Connected the `debloat-user-select` dropdown change listener in `app.js` to reload package lists dynamically for the selected user profile.
-- **ANSI Escape Code Stripping**: Filtered terminal color codes (`\033[...m`) in both `cgi-bin/api.sh` and `app.js` for clean, readable log output inside the WebUI.
-- **Package Cleanup & Installer Hardening**: Removed duplicate `ShowToast.apk` in `system/priv-app/` and updated `customize.sh` to exclude `.git/*` metadata during module extraction.
+- **Uniform Button Sizing**: Fixed button dimensions across manual input bars and package list.
+- **Cleaner Service Output**: Added stdout fallback to `cleaner.service` logging.
+- **Multi-User Dropdown Sync**: Connected user select change listener dynamically.
+- **ANSI Escape Stripping**: Filtered ANSI escape sequences in API and UI.
 
 ---
 
 ## [v1.0] - Initial Release
 
 ### 🎉 Initial Features
-- **Multi-Mode RAM Flusher (`raff-flush`)**: Integrated 4 memory flushing profiles (`safe`, `aggressive`, `extreme`, `custom`) using 32-bit `flush` binaries with a 64-bit native kernel `drop_caches` and ActivityManager fallback engine.
-- **Auto & Manual Cache Cleaner (`cleaner`)**: Instant cleanup for app `cache` and `code_cache` directories, plus an automated 6-hour `crond` background service (`cleaner.service`) with a `>1 GB` threshold and `inotify` support.
-- **Multi-User App Freezer (`raff-freeze`)**: Freeze (`pm disable-user`) and unfreeze (`pm enable`) system or user applications across all user profiles (`User 0`, `User 10` Work Profile/Clone) or specific user IDs.
-- **Systemless & PM APK Debloater (`raff-debloat`)**: Uninstall pre-installed bloatware or third-party apps with Magisk/KernelSU/APatch `.replace` systemless masking support and easy package restoration.
-- **Dual-Mode WebUI (`raff-webui`)**: Added support for both native `window.ksu.exec` root bridge (KernelSU / KernelSU-Next / APatch / MMRL) and local BusyBox HTTP CGI server on `http://127.0.0.1:8899`.
-- **Toast Notification Support**: Bundled `ShowToast.apk` system priv-app to display on-screen notifications during RAM flush and cache cleanup operations.
+- **Multi-Mode RAM Flusher**: Memory flushing profiles (`safe`, `aggressive`, `extreme`, `custom`).
+- **Auto & Manual Cache Cleaner**: Instant cleanup for app `cache` and `code_cache`.
+- **Multi-User App Freezer**: Freeze and unfreeze apps across all Android users.
+- **Systemless & PM APK Debloater**: Uninstall bloatware with Magisk `.replace` support.
+- **Dual-Mode WebUI**: Root bridge and HTTP CGI mode support.
+- **Toast Notifications**: Bundled `ShowToast.apk` support.
