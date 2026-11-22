@@ -385,13 +385,6 @@
     });
   });
 
-  document.getElementById('accent-cycle-btn').addEventListener('click', () => {
-    accentIndex = (accentIndex + 1) % M3_ACCENTS.length;
-    const chosen = M3_ACCENTS[accentIndex];
-    applyAccentColor(chosen);
-    setStoredAccent(chosen);
-  });
-
   document.querySelectorAll('.term-clear-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(btn.dataset.target);
