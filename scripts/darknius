@@ -1,0 +1,81 @@
+#!/system/bin/sh
+# DarkniusX Optimizer - Main CLI Entry Point
+MODDIR="/data/adb/modules/DarkniusXOptimizer"
+DATA_DIR="/data/adb/darkniusx"
+PROPFILE="${MODDIR}/module.prop"
+VERSION=$(sed -n 's/^version=//p' "$PROPFILE" 2>/dev/null | tr -d '\r')
+[ -z "$VERSION" ] && VERSION="v1.5"
+
+usage() {
+  echo "=========================================================="
+  echo "       DarkniusX Optimizer $VERSION by Raffxzr           "
+  echo "=========================================================="
+  echo "Usage: darknius <command> [args...]"
+  echo "Alias: dx <command> | raff <command>"
+  echo ""
+  echo "Commands:"
+  echo "  clean                 - Run cache cleaner immediately"
+  echo "  flush [mode]          - Flush RAM (safe|aggressive|extreme|custom)"
+  echo "  lod [on|off|pkg]      - Pixel LOD Scaler (Grafik MC) per-app or global"
+  echo "  thermal [on|off]      - Darknius Thermal Killer (bypass thermal limits)"
+  echo "  fstrim                - Trim /data, /cache, and /system partitions"
+  echo "  vm [mode]             - Set Kernel VM tuning (balance|gaming|multitasking)"
+  echo "  doze [on|off]         - Toggle Smart Screen-Off Deep Sleep"
+  echo "  freeze [args...]      - Multi-user APK freezer (see: darknius freeze)"
+  echo "  debloat [args...]     - System & user APK debloater (see: darknius debloat)"
+  echo "  webui [start|stop|open]- Manage WebUI server (http://127.0.0.1:8899)"
+  echo "  status                - View complete device & optimizer status"
+  echo "=========================================================="
+}
+
+cmd="$1"
+shift 2>/dev/null || true
+
+case "$cmd" in
+  clean)
+    /system/bin/cleaner "$@"
+    ;;
+  flush)
+    /system/bin/raff-flush "$@"
+    ;;
+  lod)
+    /system/bin/darknius-lod "$@"
+    ;;
+  thermal)
+    /system/bin/darknius-thermal "$@"
+    ;;
+  fstrim)
+    /system/bin/darknius-fstrim "$@"
+    ;;
+  vm)
+    /system/bin/darknius-vm "$@"
+    ;;
+  doze)
+    /system/bin/darknius-doze "$@"
+    ;;
+  freeze)
+    /system/bin/raff-freeze "$@"
+    ;;
+  debloat)
+    /system/bin/raff-debloat "$@"
+    ;;
+  webui)
+    /system/bin/raff-webui "$@"
+    ;;
+  status)
+    echo "=== DarkniusX System Status ==="
+    awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {printf "RAM: %d / %d MB (%d%% Used)\n", (t-a)/1024, t/1024, ((t-a)*100)/t}' /proc/meminfo
+    awk '/SwapTotal/ {st=$2} /SwapFree/ {sf=$2} END {if(st>0) printf "ZRAM / Swap: %d / %d MB (%d%% Used)\n", (st-sf)/1024, st/1024, ((st-sf)*100)/st; else print "ZRAM / Swap: Disabled"}' /proc/meminfo
+    if [ -f /sys/class/power_supply/battery/temp ]; then
+      btemp=$(cat /sys/class/power_supply/battery/temp)
+      awk -v t="$btemp" 'BEGIN {printf "Battery Temp: %.1f °C\n", t/10}'
+    fi
+    /system/bin/darknius-lod status 2>/dev/null
+    /system/bin/darknius-thermal status 2>/dev/null
+    /system/bin/darknius-vm status 2>/dev/null
+    /system/bin/darknius-doze status 2>/dev/null
+    ;;
+  *)
+    usage
+    ;;
+esac

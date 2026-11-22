@@ -1,7 +1,20 @@
 #!/system/bin/sh
 
-LOGFILE="/data/adb/raffoptimizer/run/flush.log"
-mkdir -p /data/adb/raffoptimizer/run
+LOGFILE="/data/adb/darkniusx/run/flush.log"
+CONFIG_DIR="/data/adb/darkniusx/config"
+WHITELIST_FILE="${CONFIG_DIR}/whitelist.list"
+mkdir -p /data/adb/darkniusx/run "${CONFIG_DIR}"
+
+is_whitelisted() {
+  local p="$1"
+  case "$p" in
+    com.topjohnwu.magisk|me.weishu.kernelsu|me.bmax.apatch|com.termux|com.dergoogler.mmrl*) return 0 ;;
+  esac
+  if [ -f "$WHITELIST_FILE" ] && grep -qxF "$p" "$WHITELIST_FILE" 2>/dev/null; then
+    return 0
+  fi
+  return 1
+}
 
 mode="${1:-safe}"
 bg_limit="${2:-4}"
@@ -35,19 +48,15 @@ native_flush() {
     aggressive|2|flush2)
       am kill-all >/dev/null 2>&1
       for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-        case "$pkg" in
-          com.topjohnwu.magisk|me.weishu.kernelsu|me.bmax.apatch|com.termux|com.dergoogler.mmrl*) continue ;;
-          *) am force-stop "$pkg" >/dev/null 2>&1 ;;
-        esac
+        if is_whitelisted "$pkg"; then continue; fi
+        am force-stop "$pkg" >/dev/null 2>&1
       done
       ;;
     extreme|3|flush3)
       am kill-all >/dev/null 2>&1
       for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-        case "$pkg" in
-          com.topjohnwu.magisk|me.weishu.kernelsu|me.bmax.apatch|com.termux|com.dergoogler.mmrl*) continue ;;
-          *) am force-stop "$pkg" >/dev/null 2>&1 ;;
-        esac
+        if is_whitelisted "$pkg"; then continue; fi
+        am force-stop "$pkg" >/dev/null 2>&1
       done
       cmd activity idle-maintenance >/dev/null 2>&1
       fstrim -v /data >/dev/null 2>&1 || true

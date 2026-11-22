@@ -1,14 +1,13 @@
 #!/system/bin/sh
-moddir="/data/adb/modules/RaffOptimizer"
-if [ -d "/data/adb/lite_modules/RaffOptimizer" ]; then
-  moddir="/data/adb/lite_modules/RaffOptimizer"
-fi
+moddir="/data/adb/modules/DarkniusXOptimizer"
+[ ! -d "$moddir" ] && moddir="/data/adb/modules/RaffOptimizer"
 
-scripts_dir="/data/adb/raffoptimizer/cleaner"
-log_file="/data/adb/raffoptimizer/run/cleaner.log"
-service_log="/data/adb/raffoptimizer/run/service.log"
+scripts_dir="/data/adb/darkniusx/cleaner"
+[ ! -d "$scripts_dir" ] && scripts_dir="/data/adb/raffoptimizer/cleaner"
+log_file="/data/adb/darkniusx/run/cleaner.log"
+service_log="/data/adb/darkniusx/run/service.log"
 
-mkdir -p /data/adb/raffoptimizer/run
+mkdir -p /data/adb/darkniusx/run
 
 if [ ! -d "${moddir}" ] || [ ! -d "${scripts_dir}" ]; then
   echo "Error: RaffOptimizer directories not found" >&2

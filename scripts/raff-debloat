@@ -1,10 +1,11 @@
 #!/system/bin/sh
 
-MODDIR="/data/adb/modules/RaffOptimizer"
-CONFIG_DIR="/data/adb/raffoptimizer/config"
+MODDIR="/data/adb/modules/DarkniusXOptimizer"
+[ ! -d "$MODDIR" ] && MODDIR="/data/adb/modules/RaffOptimizer"
+CONFIG_DIR="/data/adb/darkniusx/config"
 DEBLOAT_LIST="${CONFIG_DIR}/debloated_apps.list"
-LOGFILE="/data/adb/raffoptimizer/run/debloat.log"
-mkdir -p "${CONFIG_DIR}" /data/adb/raffoptimizer/run
+LOGFILE="/data/adb/darkniusx/run/debloat.log"
+mkdir -p "${CONFIG_DIR}" /data/adb/darkniusx/run
 touch "${DEBLOAT_LIST}"
 
 get_users() {

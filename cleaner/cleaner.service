@@ -12,14 +12,19 @@ if [ ! -x "${busybox_path}" ]; then
   fi
 fi
 
-cleaner_run_path="/data/adb/raffoptimizer/run"
+cleaner_run_path="/data/adb/darkniusx/run"
 mkdir -p "${cleaner_run_path}"
 log_cleaner="${cleaner_run_path}/cleaner.log"
 cleaner_pid="${cleaner_run_path}/cache.pid"
 current_time=$(date +"%I:%M %P")
 
-PROPFILE="/data/adb/modules/RaffOptimizer/module.prop"
+PROPFILE="/data/adb/modules/DarkniusXOptimizer/module.prop"
+[ ! -f "$PROPFILE" ] && PROPFILE="/data/adb/modules/RaffOptimizer/module.prop"
 schedule_cleaner="0 */6 * * *"
+if [ -f "/data/adb/darkniusx/config/cron_schedule" ]; then
+  custom_sched=$(cat /data/adb/darkniusx/config/cron_schedule 2>/dev/null)
+  [ -n "$custom_sched" ] && schedule_cleaner="$custom_sched"
+fi
 
 log() {
   if [ "$1" = "info" ]; then
@@ -69,7 +74,10 @@ run_auto() {
   log info "Total Cache: ${total_cache}"
 
   size_cache=1024000 # 1GB threshold in KB (configurable)
-  if [ -f "/data/adb/raffoptimizer/config/cache_limit_kb" ]; then
+  if [ -f "/data/adb/darkniusx/config/cache_limit_kb" ]; then
+    custom_limit=$(cat /data/adb/darkniusx/config/cache_limit_kb 2>/dev/null)
+    [ -n "$custom_limit" ] && size_cache="$custom_limit"
+  elif [ -f "/data/adb/raffoptimizer/config/cache_limit_kb" ]; then
     custom_limit=$(cat /data/adb/raffoptimizer/config/cache_limit_kb 2>/dev/null)
     [ -n "$custom_limit" ] && size_cache="$custom_limit"
   fi
@@ -102,7 +110,7 @@ run_crond() {
 
 display_pid() {
   local PID
-  PID=$(ps -ef 2>/dev/null | grep "crond -c /data/adb/raffoptimizer/run" | grep -v grep | awk '{print $2}' | head -n 1)
+  PID=$(ps -ef 2>/dev/null | grep -E "crond -c /data/adb/(darkniusx|raffoptimizer)/run" | grep -v grep | awk '{print $2}' | head -n 1)
   if [ -n "$PID" ]; then
     echo "$PID" > "${cleaner_pid}"
     log info "Cache Cleaner service is running (PID: $PID)"
@@ -119,7 +127,7 @@ start_cleaner() {
 
 stop_cleaner() {
   local PID
-  PID=$(ps -ef 2>/dev/null | grep "crond -c /data/adb/raffoptimizer/run" | grep -v grep | awk '{print $2}')
+  PID=$(ps -ef 2>/dev/null | grep -E "crond -c /data/adb/(darkniusx|raffoptimizer)/run" | grep -v grep | awk '{print $2}')
   if [ -n "$PID" ]; then
     kill -15 $PID 2>/dev/null
     rm -f "${cleaner_pid}"

@@ -1,0 +1,64 @@
+#!/system/bin/sh
+# DarkniusX - Kernel VM & ZRAM Tuner
+CONFIG_DIR="/data/adb/darkniusx/config"
+CONF_FILE="${CONFIG_DIR}/vm_profile"
+mkdir -p "${CONFIG_DIR}"
+
+set_vm() {
+  local swappiness="$1"
+  local vfs="$2"
+  local dirty="$3"
+  local dirty_bg="$4"
+
+  [ -w /proc/sys/vm/swappiness ] && echo "$swappiness" > /proc/sys/vm/swappiness
+  [ -w /proc/sys/vm/vfs_cache_pressure ] && echo "$vfs" > /proc/sys/vm/vfs_cache_pressure
+  [ -w /proc/sys/vm/dirty_ratio ] && echo "$dirty" > /proc/sys/vm/dirty_ratio
+  [ -w /proc/sys/vm/dirty_background_ratio ] && echo "$dirty_bg" > /proc/sys/vm/dirty_background_ratio
+  [ -w /proc/sys/vm/stat_interval ] && echo "10" > /proc/sys/vm/stat_interval
+}
+
+get_status() {
+  local p
+  p=$(cat "$CONF_FILE" 2>/dev/null || echo "balance")
+  local sw
+  sw=$(cat /proc/sys/vm/swappiness 2>/dev/null || echo "N/A")
+  local vfs
+  vfs=$(cat /proc/sys/vm/vfs_cache_pressure 2>/dev/null || echo "N/A")
+  echo "Profile: ${p} (swappiness=${sw}, vfs_cache_pressure=${vfs})"
+}
+
+apply_profile() {
+  local prof="${1:-balance}"
+  case "$prof" in
+    gaming)
+      set_vm 160 50 20 10
+      echo "gaming" > "$CONF_FILE"
+      echo "[VM Tuner] Gaming profile applied (ZRAM aggressive, low VFS cache pressure for fast game assets)."
+      ;;
+    multitasking)
+      set_vm 120 80 30 15
+      echo "multitasking" > "$CONF_FILE"
+      echo "[VM Tuner] Multitasking profile applied (Flexible page management)."
+      ;;
+    balance|*)
+      set_vm 60 100 20 10
+      echo "balance" > "$CONF_FILE"
+      echo "[VM Tuner] Balance profile applied (Stock Android balanced behavior)."
+      ;;
+  esac
+}
+
+case "$1" in
+  gaming|multitasking|balance)
+    apply_profile "$1"
+    ;;
+  status)
+    get_status
+    ;;
+  apply-saved)
+    apply_profile "$(cat "$CONF_FILE" 2>/dev/null || echo "balance")"
+    ;;
+  *)
+    echo "Usage: darknius-vm {gaming|multitasking|balance|status}"
+    ;;
+esac

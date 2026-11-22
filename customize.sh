@@ -3,11 +3,11 @@ SKIPUNZIP=1
 ASH_STANDALONE=1
 
 VERSION=$(sed -n 's/^version=//p' "$MODPATH/module.prop" 2>/dev/null | tr -d '\r')
-[ -z "$VERSION" ] && VERSION="v1.4"
+[ -z "$VERSION" ] && VERSION="v1.5"
 
 print_banner() {
   ui_print "************************************************"
-  ui_print "              RaffOptimizer ${VERSION}           "
+  ui_print "            DarkniusX Optimizer ${VERSION}      "
   ui_print "              Author : Raffxzr                  "
   ui_print "************************************************"
 }
@@ -23,12 +23,19 @@ fi
 
 print_banner
 
-ui_print "- Extracting RaffOptimizer module files..."
+ui_print "- Extracting DarkniusX Optimizer module files..."
 unzip -o "$ZIPFILE" -x 'META-INF/*' '.git/*' -d "$MODPATH" >&2
 
-# Setup persistent directory in /data/adb/raffoptimizer
-mkdir -p /data/adb/raffoptimizer/cleaner /data/adb/raffoptimizer/run /data/adb/raffoptimizer/config
-cp -af "$MODPATH/cleaner/"* /data/adb/raffoptimizer/cleaner/
+# Seamless migration from old RaffOptimizer data
+if [ -d "/data/adb/raffoptimizer" ] && [ ! -d "/data/adb/darkniusx" ]; then
+  ui_print "- Migrating data from RaffOptimizer to DarkniusX..."
+  mv /data/adb/raffoptimizer /data/adb/darkniusx 2>/dev/null || cp -af /data/adb/raffoptimizer/. /data/adb/darkniusx/ 2>/dev/null
+fi
+rm -rf /data/adb/modules/RaffOptimizer /data/adb/modules_update/RaffOptimizer 2>/dev/null
+
+# Setup persistent directory in /data/adb/darkniusx
+mkdir -p /data/adb/darkniusx/cleaner /data/adb/darkniusx/run /data/adb/darkniusx/config
+cp -af "$MODPATH/cleaner/"* /data/adb/darkniusx/cleaner/
 
 # Copy flush binaries to system/bin so both paths work
 if [ -d "$MODPATH/system/xbin" ]; then
@@ -36,15 +43,43 @@ if [ -d "$MODPATH/system/xbin" ]; then
   [ ! -d /system/xbin ] && rm -rf "$MODPATH/system/xbin"
 fi
 
+# ---------------------------------------------------------------------------
+# Universal GMS Doze XML Patcher (Android 10 - 17+)
+# Removes hardcoded battery optimization exemptions for Google Play Services
+# ---------------------------------------------------------------------------
+ui_print "- Patching system XMLs for Universal GMS Doze..."
+GMS_STR1="allow-in-power-save package=\"com.google.android.gms\""
+GMS_STR2="allow-in-data-usage-save package=\"com.google.android.gms\""
+GMS_STR3="allow-unthrottled-location package=\"com.google.android.gms\""
+
+for p in /system /system_ext /product /vendor /odm; do
+  [ -d "$p" ] || continue
+  xmls=$(find "$p/etc/sysconfig" "$p/etc/permissions" -type f -name '*.xml' 2>/dev/null)
+  for f in $xmls; do
+    if grep -qE "$GMS_STR1|$GMS_STR2|$GMS_STR3" "$f" 2>/dev/null; then
+      target="$MODPATH$f"
+      # In Magisk, files under /product, /vendor, /system_ext map under $MODPATH/system/<part>
+      case "$f" in
+        /product/*|/vendor/*|/system_ext/*|/odm/*)
+          target="$MODPATH/system$f"
+          ;;
+      esac
+      mkdir -p "$(dirname "$target")"
+      cp -af "$f" "$target"
+      sed -i "/$GMS_STR1/d;/$GMS_STR2/d;/$GMS_STR3/d" "$target"
+    fi
+  done
+done
+
 ui_print "- Setting permissions..."
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 set_perm_recursive "$MODPATH/system/bin" 0 0 0755 0755
 [ -d "$MODPATH/system/xbin" ] && set_perm_recursive "$MODPATH/system/xbin" 0 0 0755 0755
 set_perm_recursive "$MODPATH/cleaner" 0 0 0755 0755
-set_perm_recursive "/data/adb/raffoptimizer" 0 0 0755 0755
+set_perm_recursive "/data/adb/darkniusx" 0 0 0755 0755
 set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/action.sh" 0 0 0755
 set_perm "$MODPATH/uninstall.sh" 0 0 0755
 set_perm "$MODPATH/webroot/cgi-bin/api.sh" 0 0 0755
 
-ui_print "- RaffOptimizer ${VERSION} installation complete! Please reboot your device."
+ui_print "- DarkniusX Optimizer ${VERSION} installation complete! Please reboot your device."

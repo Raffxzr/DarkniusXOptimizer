@@ -1,0 +1,71 @@
+#!/system/bin/sh
+# DarkniusX - Pixel LOD Scaler (Grafik MC)
+CONFIG_DIR="/data/adb/darkniusx/config"
+CONF_FILE="${CONFIG_DIR}/lod.conf"
+mkdir -p "${CONFIG_DIR}"
+
+LOD_FLAGS="CompileJobIsThreadSafe:LinkJobIsThreadSafe:ForceTextureLodOffset4"
+
+get_status() {
+  local prop_val
+  prop_val=$(getprop debug.angle.feature_overrides_enabled 2>/dev/null)
+  local sel_pkg
+  sel_pkg=$(cmd settings get global angle_gl_driver_selection_pkgs 2>/dev/null)
+  local all_angle
+  all_angle=$(cmd settings get global angle_gl_driver_all_angle 2>/dev/null)
+
+  if [ -n "$prop_val" ] && [ "$prop_val" != '""' ]; then
+    if [ "$all_angle" = "1" ]; then
+      echo "ENABLED (Global / All Apps)"
+    elif [ -n "$sel_pkg" ] && [ "$sel_pkg" != "null" ]; then
+      echo "ENABLED (Target: $sel_pkg)"
+    else
+      echo "ENABLED (Custom)"
+    fi
+  else
+    echo "DISABLED"
+  fi
+}
+
+enable_lod() {
+  local target="$1"
+  setprop debug.angle.feature_overrides_enabled "$LOD_FLAGS"
+
+  if [ -z "$target" ] || [ "$target" = "all" ]; then
+    cmd settings put global angle_gl_driver_all_angle 1
+    cmd settings delete global angle_gl_driver_selection_pkgs 2>/dev/null || true
+    cmd settings delete global angle_gl_driver_selection_values 2>/dev/null || true
+    echo "all" > "$CONF_FILE"
+    echo "[LOD] Pixel LOD Scaler enabled globally (All Apps)."
+  else
+    cmd settings delete global angle_gl_driver_all_angle 2>/dev/null || true
+    cmd settings put global angle_gl_driver_selection_pkgs "$target"
+    cmd settings put global angle_gl_driver_selection_values "angle"
+    echo "$target" > "$CONF_FILE"
+    echo "[LOD] Pixel LOD Scaler enabled for target app: $target"
+  fi
+}
+
+disable_lod() {
+  setprop debug.angle.feature_overrides_enabled ""
+  cmd settings delete global angle_gl_driver_all_angle 2>/dev/null || true
+  cmd settings delete global angle_gl_driver_selection_pkgs 2>/dev/null || true
+  cmd settings delete global angle_gl_driver_selection_values 2>/dev/null || true
+  rm -f "$CONF_FILE"
+  echo "[LOD] Pixel LOD Scaler disabled."
+}
+
+case "$1" in
+  enable|on)
+    enable_lod "$2"
+    ;;
+  disable|off)
+    disable_lod
+    ;;
+  status)
+    echo "Pixel LOD Scaler (Grafik MC): $(get_status)"
+    ;;
+  *)
+    echo "Usage: darknius-lod {enable [pkg|all]|disable|status}"
+    ;;
+esac

@@ -1,0 +1,102 @@
+#!/system/bin/sh
+# DarkniusX - Smart GMS Doze & Screen-Off Deep Sleep Daemon
+RUN_DIR="/data/adb/darkniusx/run"
+PIDFILE="${RUN_DIR}/deepsleep.pid"
+CONFIG_DIR="/data/adb/darkniusx/config"
+FLAG_ENABLED="${CONFIG_DIR}/deepsleep_enabled"
+mkdir -p "${RUN_DIR}" "${CONFIG_DIR}"
+
+apply_gms_doze() {
+  dumpsys deviceidle whitelist -com.google.android.gms >/dev/null 2>&1 || true
+  cmd appops set com.google.android.gms RUN_IN_BACKGROUND ignore >/dev/null 2>&1 || true
+}
+
+is_screen_off() {
+  local p
+  p=$(dumpsys power 2>/dev/null | grep -m1 'Display Power' | grep -o 'state=OFF')
+  if [ -n "$p" ]; then
+    return 0
+  fi
+  local d
+  d=$(dumpsys display 2>/dev/null | grep -m1 -E 'mScreenState=OFF|mState=OFF')
+  if [ -n "$d" ]; then
+    return 0
+  fi
+  return 1
+}
+
+run_daemon() {
+  echo $$ > "$PIDFILE"
+  apply_gms_doze
+
+  local was_off=0
+
+  while true; do
+    if is_screen_off; then
+      if [ $was_off -eq 0 ]; then
+        # Grace period 8s to let immediate screen-off wakelocks settle
+        sleep 8
+        if is_screen_off; then
+          cmd deviceidle force-idle deep >/dev/null 2>&1 || dumpsys deviceidle force-idle deep >/dev/null 2>&1 || true
+          was_off=1
+        fi
+      fi
+    else
+      if [ $was_off -eq 1 ]; then
+        cmd deviceidle unforce >/dev/null 2>&1 || dumpsys deviceidle unforce >/dev/null 2>&1 || true
+        apply_gms_doze
+        was_off=0
+      fi
+    fi
+    sleep 3
+  done
+}
+
+get_status() {
+  if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+    echo "RUNNING (PID: $(cat "$PIDFILE"))"
+  elif [ -f "$FLAG_ENABLED" ]; then
+    echo "ENABLED (Standby)"
+  else
+    echo "DISABLED"
+  fi
+}
+
+start_daemon() {
+  stop_daemon
+  touch "$FLAG_ENABLED"
+  apply_gms_doze
+  nohup sh "$0" __daemon >/dev/null 2>&1 &
+  echo "[Smart Deep Sleep] Daemon started."
+}
+
+stop_daemon() {
+  if [ -f "$PIDFILE" ]; then
+    local pid
+    pid=$(cat "$PIDFILE" 2>/dev/null)
+    [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null || true
+    rm -f "$PIDFILE"
+  fi
+  pkill -f "darknius-doze __daemon" 2>/dev/null || true
+  cmd deviceidle unforce >/dev/null 2>&1 || true
+  rm -f "$FLAG_ENABLED"
+  echo "[Smart Deep Sleep] Daemon stopped."
+}
+
+case "$1" in
+  __daemon)
+    run_daemon
+    ;;
+  start|enable|on)
+    start_daemon
+    ;;
+  stop|disable|off)
+    stop_daemon
+    ;;
+  status)
+    echo "Smart Deep Sleep & GMS Doze: $(get_status)"
+    ;;
+  *)
+    echo "Usage: darknius-doze {start|stop|status}"
+    ;;
+esac

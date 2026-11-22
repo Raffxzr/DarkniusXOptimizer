@@ -1,35 +1,28 @@
 #!/system/bin/sh
-MODDIR="/data/adb/modules/RaffOptimizer"
+MODDIR="/data/adb/modules/DarkniusXOptimizer"
+[ ! -d "$MODDIR" ] && MODDIR="/data/adb/modules/RaffOptimizer"
 VERSION=$(sed -n 's/^version=//p' "$MODDIR/module.prop" 2>/dev/null | tr -d '\r')
-[ -z "$VERSION" ] && VERSION="v1.4"
+[ -z "$VERSION" ] && VERSION="v1.5"
 
-echo "=========================================="
-echo "       RaffOptimizer $VERSION by Raffxzr      "
-echo "=========================================="
+echo "=========================================================="
+echo "          DarkniusX Optimizer $VERSION by Raffxzr         "
+echo "=========================================================="
 
-echo "[1/3] Running Cache Cleaner..."
-if [ -x "/system/bin/cleaner" ]; then
-  /system/bin/cleaner
-elif [ -f "/data/adb/modules/RaffOptimizer/system/bin/cleaner" ]; then
-  sh /data/adb/modules/RaffOptimizer/system/bin/cleaner
-fi
+echo "[1/4] Running Cache Cleaner..."
+/system/bin/cleaner 2>/dev/null || true
 
 echo ""
-echo "[2/3] Running RAM Flush (Safe Mode)..."
-if [ -x "/system/bin/raff-flush" ]; then
-  /system/bin/raff-flush safe
-elif [ -f "/data/adb/modules/RaffOptimizer/system/bin/raff-flush" ]; then
-  sh /data/adb/modules/RaffOptimizer/system/bin/raff-flush safe
-fi
+echo "[2/4] Running RAM Flush (Safe Mode)..."
+/system/bin/raff-flush safe 2>/dev/null || true
 
 echo ""
-echo "[3/3] Ensuring Local WebUI Server is active..."
-if [ -x "/system/bin/raff-webui" ]; then
-  /system/bin/raff-webui open
-elif [ -f "/data/adb/modules/RaffOptimizer/system/bin/raff-webui" ]; then
-  sh /data/adb/modules/RaffOptimizer/system/bin/raff-webui open
-fi
+echo "[3/4] Running Fstrim Storage..."
+/system/bin/darknius-fstrim 2>/dev/null || true
 
-echo "=========================================="
+echo ""
+echo "[4/4] Ensuring WebUI Server is active..."
+/system/bin/raff-webui open 2>/dev/null || true
+
+echo "=========================================================="
 echo "Done! WebUI is also available at http://127.0.0.1:8899"
 sleep 2

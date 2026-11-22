@@ -1,7 +1,7 @@
-id=RaffOptimizer
-name=RaffOptimizer
-version=v1.4
-versionCode=140
+id=DarkniusXOptimizer
+name=DarkniusX Optimizer
+version=v1.5
+versionCode=150
 author=Raffxzr
-description=All-in-One Android Optimizer: Auto & Manual Cache Cleaner, Multi-Mode RAM Flusher, Multi-User App Freezer & Systemless APK Debloater with AMOLED WebUI.
+description=Extreme Android Optimizer: Pixel LOD Scaler (Grafik MC), Darknius Thermal Killer, Smart GMS Doze & Deep Sleep, Fstrim, Kernel VM Tuner, Multi-Mode RAM Flusher, Cache Cleaner & AMOLED WebUI.
 updateJson=https://raw.githubusercontent.com/Raffxzr/RaffOptimizer/main/update.json

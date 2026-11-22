@@ -1,0 +1,66 @@
+#!/system/bin/sh
+# DarkniusX - Darknius Thermal Killer
+CONFIG_DIR="/data/adb/darkniusx/config"
+FLAG_FILE="${CONFIG_DIR}/thermal_killer_active"
+mkdir -p "${CONFIG_DIR}"
+
+THERMAL_SVCS="thermal-engine mi_thermald thermald vendor.thermal-hal-1-0 vendor.thermal-hal-2-0 vendor.thermal.symlinks"
+
+get_status() {
+  if [ -f "$FLAG_FILE" ]; then
+    echo "ENABLED (Thermal Throttling Bypassed)"
+  else
+    echo "DISABLED (Stock Thermal Limits Active)"
+  fi
+}
+
+enable_thermal_killer() {
+  echo "[Thermal Killer] Terminating vendor thermal throttling daemons..."
+  for svc in $THERMAL_SVCS; do
+    stop "$svc" 2>/dev/null || true
+  done
+  pkill -9 -f "mi_thermald" 2>/dev/null || true
+  pkill -9 -f "thermal-engine" 2>/dev/null || true
+  pkill -9 -f "thermald" 2>/dev/null || true
+
+  # Set thermal zone modes to disabled where writable
+  for tz in /sys/class/thermal/thermal_zone*/mode; do
+    if [ -w "$tz" ]; then
+      echo "disabled" > "$tz" 2>/dev/null || true
+    fi
+  done
+
+  touch "$FLAG_FILE"
+  echo "[Thermal Killer] Thermal throttling successfully disabled! CPU/GPU will operate unconstrained."
+}
+
+disable_thermal_killer() {
+  echo "[Thermal Killer] Restoring stock thermal governors..."
+  for tz in /sys/class/thermal/thermal_zone*/mode; do
+    if [ -w "$tz" ]; then
+      echo "enabled" > "$tz" 2>/dev/null || true
+    fi
+  done
+
+  for svc in $THERMAL_SVCS; do
+    start "$svc" 2>/dev/null || true
+  done
+
+  rm -f "$FLAG_FILE"
+  echo "[Thermal Killer] Stock thermal controls re-enabled."
+}
+
+case "$1" in
+  enable|on)
+    enable_thermal_killer
+    ;;
+  disable|off)
+    disable_thermal_killer
+    ;;
+  status)
+    echo "Darknius Thermal Killer: $(get_status)"
+    ;;
+  *)
+    echo "Usage: darknius-thermal {enable|disable|status}"
+    ;;
+esac

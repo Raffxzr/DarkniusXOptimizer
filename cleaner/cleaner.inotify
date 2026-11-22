@@ -2,7 +2,7 @@
 inotify=$(realpath $0)
 scripts_dir=$(dirname ${inotify})
 service="${scripts_dir}/cleaner.service"
-folder_run="/data/adb/raffoptimizer/run"
+folder_run="/data/adb/darkniusx/run"
 
 events=$1
 monitor_dir=$2

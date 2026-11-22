@@ -1,7 +1,8 @@
 #!/system/bin/sh
-MODDIR="/data/adb/modules/RaffOptimizer"
+MODDIR="/data/adb/modules/DarkniusXOptimizer"
+[ ! -d "$MODDIR" ] && MODDIR="/data/adb/modules/RaffOptimizer"
 PROPFILE="${MODDIR}/module.prop"
-RUNDIR="/data/adb/raffoptimizer/run"
+RUNDIR="/data/adb/darkniusx/run"
 LOGFILE="${RUNDIR}/cleaner.log"
 mkdir -p "${RUNDIR}"
 
