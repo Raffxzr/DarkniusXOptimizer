@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#000000" />
   <meta name="color-scheme" content="dark" />
-  <title>RaffOptimizer v1.4 - WebUI</title>
+  <title>DarkniusX Optimizer v1.5 - WebUI</title>
   <link rel="stylesheet" href="style.css" />
   <script>
     (function() {
@@ -21,7 +21,7 @@
   <div class="app-container">
     <header class="top-card">
       <div class="top-bar-row">
-        <span class="eyebrow">System Utility Module</span>
+        <span class="eyebrow">Extreme Utility Module</span>
         <div class="header-actions">
           <span id="bridge-mode" class="tonal-badge">Loading...</span>
           <button id="accent-cycle-btn" class="icon-btn" type="button" title="Switch AMOLED Dark Red Accent">
@@ -32,8 +32,8 @@
         </div>
       </div>
       <div class="title-group">
-        <h1>RaffOptimizer <span class="version-pill">v1.4</span></h1>
-        <p class="subtitle">By Raffxzr • Flush RAM + Cache Cleaner + Multi-User APK Freezer &amp; Debloater</p>
+        <h1>DarkniusX Optimizer <span class="version-pill">v1.5</span></h1>
+        <p class="subtitle">By Raffxzr • Pixel LOD Scaler • Thermal Killer • GMS Doze &amp; Deep Sleep • RAM &amp; Cache</p>
       </div>
     </header>
 
@@ -57,11 +57,12 @@
     </nav>
 
     <section id="tab-optimizer" class="tab-panel active">
+      <!-- 1. System Status Card -->
       <div class="m3-card">
         <div class="card-header">
           <div class="card-title-wrap">
             <h2>System Status</h2>
-            <p class="card-desc">Real-time memory metrics and background daemon status</p>
+            <p class="card-desc">Real-time memory, storage metrics, SoC temp, and background daemon status</p>
           </div>
           <button id="btn-refresh-status" type="button" class="m3-btn tonal compact">
             <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
@@ -71,25 +72,134 @@
 
         <div class="status-grid">
           <div class="status-tile">
-            <span class="tile-label">Current RAM Usage</span>
+            <span class="tile-label">RAM Usage</span>
             <strong id="stat-ram" class="tile-value">Loading...</strong>
           </div>
           <div class="status-tile">
-            <span class="tile-label">Auto Cache Cleaner (6h Cron)</span>
-            <strong id="stat-service" class="tile-value">Loading...</strong>
+            <span class="tile-label">ZRAM / Swap</span>
+            <strong id="stat-zram" class="tile-value">Loading...</strong>
           </div>
           <div class="status-tile">
+            <span class="tile-label">Device Temp</span>
+            <strong id="stat-temp" class="tile-value">Loading...</strong>
+          </div>
+          <div class="status-tile">
+            <span class="tile-label">Auto Cache Cleaner</span>
+            <strong id="stat-service" class="tile-value">Loading...</strong>
+          </div>
+          <div class="status-tile full-span">
             <span class="tile-label">Detected User Profiles</span>
             <strong id="stat-users" class="tile-value">0:Owner</strong>
           </div>
         </div>
       </div>
 
+      <!-- 2. Pixel LOD Scaler (Grafik MC) Card -->
+      <div class="m3-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <h2>Pixel LOD Scaler (Grafik MC)</h2>
+            <p class="card-desc">Force ANGLE driver texture LOD offset (+4) for massive FPS boosts in Free Fire &amp; heavy 3D games.</p>
+          </div>
+          <span id="stat-lod" class="tonal-badge">Checking...</span>
+        </div>
+
+        <div class="filter-row">
+          <select id="lod-target-select" class="m3-select">
+            <option value="com.dts.freefireth">Target: Free Fire (com.dts.freefireth)</option>
+            <option value="com.dts.freefiremax">Target: Free Fire MAX (com.dts.freefiremax)</option>
+            <option value="com.mobile.legends">Target: Mobile Legends (com.mobile.legends)</option>
+            <option value="com.pubg.imobile">Target: BGMI / PUBG (com.pubg.imobile)</option>
+            <option value="com.tencent.ig">Target: PUBG Mobile Global (com.tencent.ig)</option>
+            <option value="all">Target: Global (All Apps &amp; Games)</option>
+            <option value="custom">Target: Custom Package Name...</option>
+          </select>
+        </div>
+        <input type="text" id="lod-custom-pkg" class="m3-input" placeholder="Enter custom package (e.g., com.dts.freefireth)" style="display:none;" />
+
+        <div class="button-row-equal">
+          <button id="btn-lod-enable" type="button" class="m3-btn filled">
+            <span>Enable LOD (Grafik MC)</span>
+          </button>
+          <button id="btn-lod-disable" type="button" class="m3-btn outlined-danger">
+            <span>Disable LOD</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Darknius Thermal Killer Card -->
+      <div class="m3-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <h2>Darknius Thermal Killer</h2>
+            <p class="card-desc">Terminate vendor throttling services (mi_thermald, thermal-engine) and unconstrain CPU/GPU frequencies.</p>
+          </div>
+          <span id="stat-thermal" class="tonal-badge">Checking...</span>
+        </div>
+
+        <div class="button-row-equal">
+          <button id="btn-thermal-enable" type="button" class="m3-btn filled">
+            <span>Kill Thermal Throttling</span>
+          </button>
+          <button id="btn-thermal-disable" type="button" class="m3-btn tonal">
+            <span>Restore Stock Thermal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 4. Kernel VM & Storage Tuning Card -->
+      <div class="m3-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <h2>Kernel VM &amp; Storage Tuning</h2>
+            <p class="card-desc">Tune Linux kernel virtual memory swappiness, cache pressure, and run partition Fstrim.</p>
+          </div>
+          <span id="stat-vm" class="tonal-badge">Checking...</span>
+        </div>
+
+        <div class="button-grid-3">
+          <button type="button" class="m3-btn tonal-primary btn-vm-preset" data-mode="gaming">
+            <span>Gaming (ZRAM 160)</span>
+          </button>
+          <button type="button" class="m3-btn tonal btn-vm-preset" data-mode="balance">
+            <span>Balance (Stock 60)</span>
+          </button>
+          <button type="button" class="m3-btn tonal-secondary btn-vm-preset" data-mode="multitasking">
+            <span>Multitask (120)</span>
+          </button>
+        </div>
+
+        <button id="btn-run-fstrim" type="button" class="m3-btn filled-tonal-warn full-btn">
+          <span>Run Storage Fstrim (/data, /cache, /system)</span>
+        </button>
+      </div>
+
+      <!-- 5. Smart GMS Doze & Screen-Off Deep Sleep Card -->
+      <div class="m3-card">
+        <div class="card-header">
+          <div class="card-title-wrap">
+            <h2>Smart GMS Doze &amp; Deep Sleep</h2>
+            <p class="card-desc">Universal GMS battery optimization (Android 10-17+) with smart screen-off deep sleep (zero CPU spikes).</p>
+          </div>
+          <span id="stat-doze" class="tonal-badge">Checking...</span>
+        </div>
+
+        <div class="button-row-equal">
+          <button id="btn-doze-start" type="button" class="m3-btn filled">
+            <span>Start Deep Sleep Daemon</span>
+          </button>
+          <button id="btn-doze-stop" type="button" class="m3-btn outlined-danger">
+            <span>Stop Daemon</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 6. Flush RAM Card with Whitelist Support -->
       <div class="m3-card">
         <div class="card-header">
           <div class="card-title-wrap">
             <h2>Flush RAM (Reborn Engine)</h2>
-            <p class="card-desc">Choose a RAM flushing profile before gaming or whenever your device feels sluggish.</p>
+            <p class="card-desc">Free up memory before gaming. Whitelisted apps will remain active.</p>
           </div>
         </div>
 
@@ -107,13 +217,31 @@
             <span>Flush 5 (Custom Limit)</span>
           </button>
         </div>
+
+        <!-- Whitelist App Manager -->
+        <div class="manual-action-box">
+          <div class="card-title-wrap">
+            <h3 style="font-size:0.9rem; font-weight:600;">Flush RAM Protected Whitelist</h3>
+            <p class="card-desc">Apps that won't be killed during Aggressive / Extreme flush.</p>
+          </div>
+          <div class="button-row-equal">
+            <input type="text" id="whitelist-pkg-input" class="m3-input" placeholder="Package name (e.g., com.spotify.music)" />
+            <button id="btn-add-whitelist" type="button" class="m3-btn filled">
+              <span>Add to Whitelist</span>
+            </button>
+          </div>
+          <div id="whitelist-chips" class="whitelist-chips">
+            <span class="chip-item">Loading whitelist...</span>
+          </div>
+        </div>
       </div>
 
+      <!-- 7. Cache Cleaner & Scheduler Settings Card -->
       <div class="m3-card">
         <div class="card-header">
           <div class="card-title-wrap">
-            <h2>Cache Cleaner</h2>
-            <p class="card-desc">Instantly clean cache &amp; code_cache across all apps or manage the automatic background service (&gt;1GB threshold).</p>
+            <h2>Cache Cleaner &amp; Scheduler Settings</h2>
+            <p class="card-desc">Clean application cache or customize the automatic background cleanup threshold and cron interval.</p>
           </div>
         </div>
 
@@ -121,6 +249,26 @@
           <button id="btn-clean-now" type="button" class="m3-btn filled full-btn">
             <span>Clean Cache Now</span>
           </button>
+
+          <div class="filter-row">
+            <select id="cleaner-limit-select" class="m3-select">
+              <option value="512000">Limit: 500 MB</option>
+              <option value="1024000" selected>Limit: 1 GB (Recommended)</option>
+              <option value="2048000">Limit: 2 GB</option>
+              <option value="3072000">Limit: 3 GB</option>
+            </select>
+            <select id="cleaner-cron-select" class="m3-select">
+              <option value="0 */3 * * *">Schedule: Every 3 Hours</option>
+              <option value="0 */6 * * *" selected>Schedule: Every 6 Hours (Default)</option>
+              <option value="0 */12 * * *">Schedule: Every 12 Hours</option>
+              <option value="0 0 * * *">Schedule: Every 24 Hours</option>
+            </select>
+          </div>
+
+          <button id="btn-save-cleaner-config" type="button" class="m3-btn tonal full-btn">
+            <span>Save Scheduler Settings</span>
+          </button>
+
           <div class="button-row-equal">
             <button id="btn-start-cleaner" type="button" class="m3-btn tonal">
               <span>Start Auto-Cleaner</span>
@@ -135,11 +283,11 @@
           <div class="terminal-header">
             <div class="terminal-title">
               <span class="status-dot" id="opt-term-dot"></span>
-              <span>Optimizer Execution Console (raff-flush / cleaner)</span>
+              <span>DarkniusX Execution Console</span>
             </div>
             <button type="button" class="term-clear-btn" data-target="opt-terminal-body">Clear</button>
           </div>
-          <pre id="opt-terminal-body" class="terminal-body">[System] Ready. Waiting for Flush RAM or Cache Cleaner command...</pre>
+          <pre id="opt-terminal-body" class="terminal-body">[System] Ready. Waiting for command execution...</pre>
         </div>
       </div>
     </section>
@@ -190,7 +338,7 @@
           <div class="terminal-header">
             <div class="terminal-title">
               <span class="status-dot" id="freeze-term-dot"></span>
-              <span>Freeze Script Console (raff-freeze)</span>
+              <span>Freeze Script Console (darknius freeze)</span>
             </div>
             <button type="button" class="term-clear-btn" data-target="freeze-terminal-body">Clear</button>
           </div>
@@ -250,7 +398,7 @@
           <div class="terminal-header">
             <div class="terminal-title">
               <span class="status-dot" id="debloat-term-dot"></span>
-              <span>Debloat Script Console (raff-debloat)</span>
+              <span>Debloat Script Console (darknius debloat)</span>
             </div>
             <button type="button" class="term-clear-btn" data-target="debloat-terminal-body">Clear</button>
           </div>
@@ -263,8 +411,8 @@
       <div class="m3-card">
         <div class="card-header">
           <div class="card-title-wrap">
-            <h2>RaffOptimizer Activity Logs</h2>
-            <p class="card-desc">Persistent logs stored in /data/adb/raffoptimizer/run/</p>
+            <h2>DarkniusX Activity Logs</h2>
+            <p class="card-desc">Persistent logs stored in /data/adb/darkniusx/run/</p>
           </div>
         </div>
 
@@ -279,23 +427,32 @@
 
         <div class="terminal-container">
           <div class="terminal-header">
-            <div class="terminal-title"><span class="status-dot"></span><span>Cache Cleaner Log (cleaner.log)</span></div>
+            <div class="terminal-title">
+              <span class="status-dot"></span>
+              <span>Auto Cache Cleaner Daemon Log</span>
+            </div>
           </div>
-          <pre id="log-cleaner" class="terminal-body">No logs yet.</pre>
+          <pre id="log-cleaner" class="terminal-body">Loading...</pre>
         </div>
 
         <div class="terminal-container">
           <div class="terminal-header">
-            <div class="terminal-title"><span class="status-dot"></span><span>RAM Flush Log (flush.log)</span></div>
+            <div class="terminal-title">
+              <span class="status-dot"></span>
+              <span>RAM Flush &amp; Fstrim Log</span>
+            </div>
           </div>
-          <pre id="log-flush" class="terminal-body">No logs yet.</pre>
+          <pre id="log-flush" class="terminal-body">Loading...</pre>
         </div>
 
         <div class="terminal-container">
           <div class="terminal-header">
-            <div class="terminal-title"><span class="status-dot"></span><span>APK Freeze &amp; Debloat Log (freeze.log &amp; debloat.log)</span></div>
+            <div class="terminal-title">
+              <span class="status-dot"></span>
+              <span>Freeze &amp; Debloat Log</span>
+            </div>
           </div>
-          <pre id="log-apk" class="terminal-body">No logs yet.</pre>
+          <pre id="log-apk" class="terminal-body">Loading...</pre>
         </div>
       </div>
     </section>

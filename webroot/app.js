@@ -1,7 +1,6 @@
 (() => {
-  // Curated AMOLED Dark Red & Crimson palette
   const M3_ACCENTS = ['#e53935', '#ff3344', '#d32f2f', '#c62828', '#ff5252', '#b71c1c'];
-  const STORAGE_KEY = 'raff_accent';
+  const STORAGE_KEY = 'darknius_accent';
   const DEFAULT_ACCENT = '#e53935';
 
   function getStoredAccent() {
@@ -26,7 +25,6 @@
     document.documentElement.style.setProperty('--active-accent', formatted);
   }
 
-  // Early synchronous theme initialization to prevent flash
   let currentAccent = getStoredAccent();
   let accentIndex = M3_ACCENTS.indexOf(currentAccent);
   if (accentIndex === -1) accentIndex = 0;
@@ -178,17 +176,89 @@
     if (hasKsuBridge()) {
       if (action === 'stats') {
         const mem = await runShell("awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {if(t>0) printf \"%d / %d MB (%d%%)\", (t-a)/1024, t/1024, ((t-a)*100)/t}' /proc/meminfo");
+        const zram = await runShell("awk '/SwapTotal/ {st=$2} /SwapFree/ {sf=$2} END {if(st>0) printf \"%d / %d MB (%d%%)\", (st-sf)/1024, st/1024, ((st-sf)*100)/st; else print \"Off\"}' /proc/meminfo");
+        const temp = await runShell("awk '{printf \"%.1f°C\", $1/1000}' /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo '38.0°C'");
         const users = await runShell("pm list users 2>/dev/null | grep 'UserInfo{' | sed -E 's/.*UserInfo\\{([0-9]+):([^:]+):.*/\\1:\\2/' | tr '\\n' ',' | sed 's/,$//'");
-        const pid = await runShell("ps -ef 2>/dev/null | grep 'crond -c /data/adb/raffoptimizer/run' | grep -v grep | awk '{print $2}' | head -n 1");
+        const service = await runShell("ps -ef 2>/dev/null | grep -E 'crond -c /data/adb/darkniusx/run|cleaner' | grep -v grep | awk '{print $2}' | head -n 1");
+        const lodProp = await runShell("getprop debug.angle.feature_overrides_enabled 2>/dev/null");
+        const lod = lodProp.includes('ForceTextureLodOffset4') ? 'Active (LOD +4)' : 'Inactive';
+        const thermPid = await runShell("pidof mi_thermald thermal-engine thermald 2>/dev/null");
+        const thermal = thermPid.trim() ? 'Stock Active' : 'Killed (Disabled)';
+        const swappiness = await runShell("cat /proc/sys/vm/swappiness 2>/dev/null");
+        const sVal = parseInt(swappiness.trim(), 10) || 60;
+        const vm = sVal >= 150 ? 'Gaming' : sVal >= 100 ? 'Multitask' : 'Balance';
+        const dozePid = await runShell("ps -ef 2>/dev/null | grep 'darknius-doze' | grep -v grep | awk '{print $2}' | head -n 1");
+        const doze = dozePid.trim() ? `Active (PID: ${dozePid.trim()})` : 'Inactive';
+
         return {
           status: 'ok',
           mem: mem.trim() || 'N/A',
+          zram: zram.trim() || 'Off',
+          temp: temp.trim() || '38.0°C',
+          service: service.trim() ? 'Running (PID: ' + service.trim() + ')' : 'Stopped',
           users: users.trim() || '0:Owner',
-          service: pid.trim() ? 'Running (PID: ' + pid.trim() + ')' : 'Stopped'
+          lod,
+          thermal,
+          vm,
+          doze
         };
       }
+      if (action === 'lod_toggle') {
+        const cmd = params.mode === 'enable'
+          ? `/system/bin/darknius-lod enable "${params.target || 'global'}"`
+          : `/system/bin/darknius-lod disable`;
+        const out = await runShell(cmd);
+        return { status: 'ok', output: stripAnsi(out).trim() };
+      }
+      if (action === 'thermal_toggle') {
+        const cmd = params.mode === 'enable'
+          ? `/system/bin/darknius-thermal enable`
+          : `/system/bin/darknius-thermal disable`;
+        const out = await runShell(cmd);
+        return { status: 'ok', output: stripAnsi(out).trim() };
+      }
+      if (action === 'fstrim') {
+        const out = await runShell(`/system/bin/darknius-fstrim`);
+        return { status: 'ok', output: stripAnsi(out).trim() };
+      }
+      if (action === 'vm_set') {
+        const out = await runShell(`/system/bin/darknius-vm set "${params.profile || 'balance'}"`);
+        return { status: 'ok', output: stripAnsi(out).trim() };
+      }
+      if (action === 'doze_toggle') {
+        const cmd = params.mode === 'start'
+          ? `/system/bin/darknius-doze start`
+          : `/system/bin/darknius-doze stop`;
+        const out = await runShell(cmd);
+        return { status: 'ok', output: stripAnsi(out).trim() };
+      }
+      if (action === 'whitelist_get') {
+        const out = await runShell("cat /data/adb/darkniusx/config/whitelist.list 2>/dev/null | grep -v '^[[:space:]]*#' | grep -v '^[[:space:]]*$' | tr '\\n' ','");
+        return { status: 'ok', whitelist: out.trim() };
+      }
+      if (action === 'whitelist_add') {
+        const pkg = (params.pkg || '').trim();
+        await runShell(`mkdir -p /data/adb/darkniusx/config; if ! grep -q "^${pkg}$" /data/adb/darkniusx/config/whitelist.list 2>/dev/null; then echo "${pkg}" >> /data/adb/darkniusx/config/whitelist.list; fi`);
+        return { status: 'ok', output: `Whitelisted ${pkg}` };
+      }
+      if (action === 'whitelist_remove') {
+        const pkg = (params.pkg || '').trim();
+        await runShell(`sed -i "/^${pkg}$/d" /data/adb/darkniusx/config/whitelist.list 2>/dev/null`);
+        return { status: 'ok', output: `Removed ${pkg} from whitelist` };
+      }
+      if (action === 'cleaner_config_get') {
+        const limit = await runShell("cat /data/adb/darkniusx/config/cleaner_limit.conf 2>/dev/null || echo 1024000");
+        const cron = await runShell("crontab -l 2>/dev/null | grep 'cleaner' | awk '{print $1,$2,$3,$4,$5}' || echo '0 */6 * * *'");
+        return { status: 'ok', limit: limit.trim() || '1024000', cron: cron.trim() || '0 */6 * * *' };
+      }
+      if (action === 'cleaner_config_set') {
+        const limit = params.limit || '1024000';
+        const interval = params.interval || '0 */6 * * *';
+        await runShell(`mkdir -p /data/adb/darkniusx/config; echo "${limit}" > /data/adb/darkniusx/config/cleaner_limit.conf; (crontab -l 2>/dev/null | grep -v 'cleaner'; echo "${interval} /system/bin/cleaner >/dev/null 2>&1") | crontab -`);
+        return { status: 'ok', output: `Scheduler updated (Threshold: ${limit}KB, Cron: ${interval})` };
+      }
       if (action === 'flush') {
-        const out = await runShell(`/system/bin/raff-flush ${params.mode || 'safe'}`);
+        const out = await runShell(`/system/bin/darknius-flush ${params.mode || 'safe'}`);
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'clean') {
@@ -196,7 +266,7 @@
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'service_toggle') {
-        const out = await runShell(`/data/adb/raffoptimizer/cleaner/cleaner.service ${params.mode || 'start'}`);
+        const out = await runShell(`/data/adb/darkniusx/cleaner/cleaner.service ${params.mode || 'start'}`);
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'packages') {
@@ -204,7 +274,7 @@
         const sys = await runShell(`pm list packages -s --user ${u} 2>/dev/null | cut -d: -f2 | sort | tr '\n' ','`);
         const usr = await runShell(`pm list packages -3 --user ${u} 2>/dev/null | cut -d: -f2 | sort | tr '\n' ','`);
         const frz = await runShell(`pm list packages -d --user ${u} 2>/dev/null | cut -d: -f2 | sort | tr '\n' ','`);
-        const rem = await runShell(`cat /data/adb/raffoptimizer/config/debloated_apps.list 2>/dev/null | cut -d'|' -f1 | tr '\n' ','`);
+        const rem = await runShell(`cat /data/adb/darkniusx/config/debloated_apps.list 2>/dev/null | cut -d'|' -f1 | tr '\n' ','`);
         return {
           status: 'ok',
           system: sys.trim(),
@@ -214,26 +284,26 @@
         };
       }
       if (action === 'freeze' || action === 'unfreeze') {
-        const out = await runShell(`/system/bin/raff-freeze ${action} "${params.pkg}" --user "${params.user || 'all'}"`);
+        const out = await runShell(`/system/bin/darknius-freeze ${action} "${params.pkg}" --user "${params.user || 'all'}"`);
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'remove') {
         const flag = params.mode === 'systemless' ? '--systemless' : '';
-        const out = await runShell(`/system/bin/raff-debloat remove "${params.pkg}" --user "${params.user || 'all'}" ${flag}`);
+        const out = await runShell(`/system/bin/darknius-debloat remove "${params.pkg}" --user "${params.user || 'all'}" ${flag}`);
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'restore') {
-        const out = await runShell(`/system/bin/raff-debloat restore "${params.pkg}" --user "${params.user || 'all'}"`);
+        const out = await runShell(`/system/bin/darknius-debloat restore "${params.pkg}" --user "${params.user || 'all'}"`);
         return { status: 'ok', output: stripAnsi(out).trim() };
       }
       if (action === 'logs') {
-        const c = await runShell(`cat /data/adb/raffoptimizer/run/cleaner.log 2>/dev/null | tail -n 30`);
-        const f = await runShell(`cat /data/adb/raffoptimizer/run/flush.log 2>/dev/null | tail -n 20`);
-        const d = await runShell(`cat /data/adb/raffoptimizer/run/debloat.log /data/adb/raffoptimizer/run/freeze.log 2>/dev/null | tail -n 30`);
+        const c = await runShell(`cat /data/adb/darkniusx/run/cleaner.log 2>/dev/null | tail -n 30`);
+        const f = await runShell(`cat /data/adb/darkniusx/run/flush.log 2>/dev/null | tail -n 20`);
+        const d = await runShell(`cat /data/adb/darkniusx/run/debloat.log /data/adb/darkniusx/run/freeze.log 2>/dev/null | tail -n 30`);
         return { status: 'ok', cleaner_log: stripAnsi(c), flush_log: stripAnsi(f), apk_log: stripAnsi(d) };
       }
       if (action === 'clear_logs') {
-        await runShell(`> /data/adb/raffoptimizer/run/cleaner.log; > /data/adb/raffoptimizer/run/flush.log; > /data/adb/raffoptimizer/run/debloat.log; > /data/adb/raffoptimizer/run/freeze.log`);
+        await runShell(`> /data/adb/darkniusx/run/cleaner.log; > /data/adb/darkniusx/run/flush.log; > /data/adb/darkniusx/run/debloat.log; > /data/adb/darkniusx/run/freeze.log; > /data/adb/darkniusx/run/doze.log 2>/dev/null`);
         return { status: 'ok', output: 'All module logs cleared.' };
       }
     } else {
@@ -244,10 +314,57 @@
       } catch (e) {
         return {
           status: 'error',
-          output: 'Failed to reach CGI server. Run "su -c raff-webui" or open via KernelSU/APatch/MMRL WebUI.'
+          output: 'Failed to reach CGI server. Run "su -c darknius-webui" or open via KernelSU/APatch/MMRL WebUI.'
         };
       }
     }
+  }
+
+  function getPackageSafety(pkg, isSystem) {
+    if (!isSystem) return { level: 'safety-safe', label: '🟢 Safe' };
+
+    const criticals = [
+      'android',
+      'com.android.systemui',
+      'com.android.settings',
+      'com.android.phone',
+      'com.android.server.telecom',
+      'com.google.android.packageinstaller',
+      'com.android.packageinstaller',
+      'com.android.permissioncontroller',
+      'com.google.android.permissioncontroller',
+      'com.android.keyguard',
+      'com.android.providers.telephony',
+      'com.android.providers.settings'
+    ];
+    if (criticals.includes(pkg)) {
+      return { level: 'safety-critical', label: '🔴 Critical' };
+    }
+
+    const cautions = [
+      'com.google.android.gms',
+      'com.android.vending',
+      'com.google.android.inputmethod.latin',
+      'com.android.inputmethod.latin',
+      'com.android.dialer',
+      'com.google.android.dialer',
+      'com.android.contacts',
+      'com.google.android.contacts',
+      'com.android.calculator',
+      'com.android.providers.media',
+      'com.android.providers.downloads',
+      'com.google.android.webview'
+    ];
+    if (cautions.includes(pkg)) {
+      return { level: 'safety-caution', label: '🟡 Caution' };
+    }
+
+    const bloatPatterns = /facebook|instagram|tiktok|netflix|spotify|amazon|analytics|telemetry|feedback|gamecenter|browser|weather|music|video|bloat|retail|lens|youtube|chrome|gmail|maps|docs|drive/i;
+    if (bloatPatterns.test(pkg)) {
+      return { level: 'safety-safe', label: '🟢 Safe' };
+    }
+
+    return { level: 'safety-caution', label: '🟡 Caution' };
   }
 
   document.querySelectorAll('.nav-item').forEach((btn) => {
@@ -313,9 +430,65 @@
     const data = await apiCall('stats');
     if (data && data.status === 'ok') {
       document.getElementById('stat-ram').textContent = data.mem || 'N/A';
-      document.getElementById('stat-service').textContent = data.service || 'Unknown';
+      document.getElementById('stat-zram').textContent = data.zram || 'Off';
+      document.getElementById('stat-temp').textContent = data.temp || '38.0°C';
+      document.getElementById('stat-service').textContent = data.service || 'Stopped';
       document.getElementById('stat-users').textContent = data.users ? data.users.replace(/,/g, ', ') : '0:Owner';
+
+      const lodEl = document.getElementById('stat-lod');
+      if (lodEl) lodEl.textContent = data.lod || 'Inactive';
+
+      const thermEl = document.getElementById('stat-thermal');
+      if (thermEl) thermEl.textContent = data.thermal || 'Stock Active';
+
+      const vmEl = document.getElementById('stat-vm');
+      if (vmEl) vmEl.textContent = data.vm || 'Balance';
+
+      const dozeEl = document.getElementById('stat-doze');
+      if (dozeEl) dozeEl.textContent = data.doze || 'Inactive';
+
       populateUserDropdowns(data.users || '0:Owner');
+    }
+  }
+
+  async function loadWhitelist() {
+    const res = await apiCall('whitelist_get');
+    const container = document.getElementById('whitelist-chips');
+    if (!container) return;
+
+    if (res && res.status === 'ok') {
+      const pkgs = (res.whitelist || '').split(',').map((p) => p.trim()).filter(Boolean);
+      if (pkgs.length === 0) {
+        container.innerHTML = `<span style="font-size:0.78rem; color:var(--md-text-muted);">No whitelisted packages.</span>`;
+        return;
+      }
+      container.innerHTML = '';
+      pkgs.forEach((pkg) => {
+        const chip = document.createElement('span');
+        chip.className = 'whitelist-chip';
+        chip.innerHTML = `<span>${pkg}</span><button type="button" class="chip-remove-btn" title="Remove">&times;</button>`;
+        chip.querySelector('.chip-remove-btn').addEventListener('click', async () => {
+          await apiCall('whitelist_remove', { pkg });
+          loadWhitelist();
+        });
+        container.appendChild(chip);
+      });
+    }
+  }
+
+  async function loadCleanerConfig() {
+    const res = await apiCall('cleaner_config_get');
+    if (res && res.status === 'ok') {
+      const limitSel = document.getElementById('cleaner-limit-select');
+      const cronSel = document.getElementById('cleaner-cron-select');
+      if (limitSel && res.limit) {
+        limitSel.value = res.limit;
+        syncSelectOverlay(limitSel);
+      }
+      if (cronSel && res.cron) {
+        cronSel.value = res.cron;
+        syncSelectOverlay(cronSel);
+      }
     }
   }
 
@@ -324,10 +497,106 @@
     loadStats();
   });
 
+  const lodSelect = document.getElementById('lod-target-select');
+  const lodCustomInput = document.getElementById('lod-custom-pkg');
+  if (lodSelect && lodCustomInput) {
+    lodSelect.addEventListener('change', () => {
+      lodCustomInput.style.display = lodSelect.value === 'custom' ? 'block' : 'none';
+      syncSelectOverlay(lodSelect);
+    });
+  }
+
+  document.getElementById('btn-lod-enable').addEventListener('click', async () => {
+    let target = lodSelect.value;
+    if (target === 'custom') {
+      target = (lodCustomInput.value || '').trim();
+      if (!target) {
+        writeTerm('opt-terminal-body', 'opt-term-dot', 'Error: Please specify target package for Pixel LOD.');
+        return;
+      }
+    }
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-lod enable ${target}\nEnabling Pixel LOD Scaler (Grafik MC)...`, true);
+    const res = await apiCall('lod_toggle', { mode: 'enable', target });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Pixel LOD enabled.', false);
+    loadStats();
+  });
+
+  document.getElementById('btn-lod-disable').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-lod disable\nDisabling Pixel LOD Scaler...`, true);
+    const res = await apiCall('lod_toggle', { mode: 'disable' });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Pixel LOD disabled.', false);
+    loadStats();
+  });
+
+  document.getElementById('btn-thermal-enable').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-thermal enable\nActivating Darknius Thermal Killer...`, true);
+    const res = await apiCall('thermal_toggle', { mode: 'enable' });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Thermal throttling killed.', false);
+    loadStats();
+  });
+
+  document.getElementById('btn-thermal-disable').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-thermal disable\nRestoring stock thermal daemons...`, true);
+    const res = await apiCall('thermal_toggle', { mode: 'disable' });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Thermal throttler restored.', false);
+    loadStats();
+  });
+
+  document.querySelectorAll('.btn-vm-preset').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const mode = btn.dataset.mode;
+      writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-vm set ${mode}\nApplying Kernel VM profile...`, true);
+      const res = await apiCall('vm_set', { profile: mode });
+      writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Kernel VM tuned.', false);
+      loadStats();
+    });
+  });
+
+  document.getElementById('btn-run-fstrim').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-fstrim\nTrimming filesystem blocks (/data, /cache, /system)...`, true);
+    const res = await apiCall('fstrim');
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Storage Fstrim finished.', false);
+  });
+
+  document.getElementById('btn-doze-start').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-doze start\nStarting Smart GMS Doze & Deep Sleep daemon...`, true);
+    const res = await apiCall('doze_toggle', { mode: 'start' });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Deep sleep daemon active.', false);
+    loadStats();
+  });
+
+  document.getElementById('btn-doze-stop').addEventListener('click', async () => {
+    writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-doze stop\nStopping Deep Sleep daemon...`, true);
+    const res = await apiCall('doze_toggle', { mode: 'stop' });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Deep sleep daemon stopped.', false);
+    loadStats();
+  });
+
+  document.getElementById('btn-add-whitelist').addEventListener('click', async () => {
+    const input = document.getElementById('whitelist-pkg-input');
+    const pkg = (input.value || '').trim();
+    if (!pkg) {
+      writeTerm('opt-terminal-body', 'opt-term-dot', 'Error: Enter package name to whitelist.');
+      return;
+    }
+    const res = await apiCall('whitelist_add', { pkg });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || `Whitelisted ${pkg}`, false);
+    input.value = '';
+    loadWhitelist();
+  });
+
+  document.getElementById('btn-save-cleaner-config').addEventListener('click', async () => {
+    const limit = document.getElementById('cleaner-limit-select').value;
+    const interval = document.getElementById('cleaner-cron-select').value;
+    writeTerm('opt-terminal-body', 'opt-term-dot', `Saving Auto-Cleaner settings (Limit: ${limit}KB, Cron: ${interval})...`, true);
+    const res = await apiCall('cleaner_config_set', { limit, interval });
+    writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'Scheduler settings saved.', false);
+  });
+
   document.querySelectorAll('.action-flush').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const mode = btn.dataset.mode;
-      writeTerm('opt-terminal-body', 'opt-term-dot', `$ raff-flush ${mode}\nRunning RAM Flush (${mode} profile)...`, true);
+      writeTerm('opt-terminal-body', 'opt-term-dot', `$ darknius-flush ${mode}\nRunning RAM Flush (${mode} profile)...`, true);
       const res = await apiCall('flush', { mode });
       writeTerm('opt-terminal-body', 'opt-term-dot', res.output || 'RAM Flush completed!', false);
       loadStats();
@@ -400,12 +669,14 @@
       row.className = 'pkg-item';
       const btnClass = item.frozen ? 'tonal' : 'tonal-primary';
       const btnText = item.frozen ? 'Unfreeze' : 'Freeze';
+      const safety = getPackageSafety(item.pkg, item.type === 'system');
 
       row.innerHTML = `
         <div class="pkg-info">
           <span class="pkg-name">${item.pkg}</span>
           <div class="pkg-badges">
             <span class="pkg-tag">${item.type === 'system' ? 'System' : 'User'}</span>
+            <span class="pkg-tag ${safety.level}">${safety.label}</span>
             ${item.frozen ? '<span class="pkg-tag frozen">Frozen</span>' : ''}
           </div>
         </div>
@@ -424,7 +695,7 @@
 
   async function doFreezeAction(action, pkg) {
     const user = document.getElementById('freeze-user-select').value || 'all';
-    writeTerm('freeze-terminal-body', 'freeze-term-dot', `$ raff-freeze ${action} ${pkg} --user ${user}`, true);
+    writeTerm('freeze-terminal-body', 'freeze-term-dot', `$ darknius-freeze ${action} ${pkg} --user ${user}`, true);
     const res = await apiCall(action, { pkg, user });
     writeTerm('freeze-terminal-body', 'freeze-term-dot', res.output || 'Done!', false);
     if (action === 'freeze') pkgState.frozen.add(pkg);
@@ -476,12 +747,14 @@
       const isRemoved = item.type === 'removed';
       const btnClass = isRemoved ? 'tonal' : 'filled-danger';
       const btnText = isRemoved ? 'Restore' : 'Remove';
+      const safety = getPackageSafety(item.pkg, item.type === 'system');
 
       row.innerHTML = `
         <div class="pkg-info">
           <span class="pkg-name">${item.pkg}</span>
           <div class="pkg-badges">
             <span class="pkg-tag ${isRemoved ? 'frozen' : ''}">${item.type === 'system' ? 'System' : isRemoved ? 'Removed' : 'User'}</span>
+            <span class="pkg-tag ${safety.level}">${safety.label}</span>
           </div>
         </div>
         <button type="button" class="m3-btn pkg-action-btn ${btnClass}">
@@ -501,7 +774,7 @@
     const user = document.getElementById('debloat-user-select').value || 'all';
     const mode = document.getElementById('debloat-mode-select').value || 'systemless';
     const flagStr = action === 'remove' && mode === 'systemless' ? ' --systemless' : '';
-    writeTerm('debloat-terminal-body', 'debloat-term-dot', `$ raff-debloat ${action} ${pkg} --user ${user}${flagStr}`, true);
+    writeTerm('debloat-terminal-body', 'debloat-term-dot', `$ darknius-debloat ${action} ${pkg} --user ${user}${flagStr}`, true);
     const res = await apiCall(action, { pkg, user, mode });
     writeTerm('debloat-terminal-body', 'debloat-term-dot', res.output || 'Done!', false);
     if (action === 'remove') pkgState.removed.add(pkg);
@@ -555,5 +828,7 @@
   window.addEventListener('DOMContentLoaded', () => {
     setupMarqueeElements();
     loadStats();
+    loadWhitelist();
+    loadCleanerConfig();
   });
 })();
