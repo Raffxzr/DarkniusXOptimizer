@@ -26,8 +26,7 @@
     document.documentElement.style.setProperty('--active-accent', formatted);
   }
 
-  // Terapkan accent color secepat mungkin (synchronous) saat script pertama dieksekusi
-  // untuk mencegah flash layar gelap / unstyled accent
+  // Early synchronous theme initialization to prevent flash
   let currentAccent = getStoredAccent();
   let accentIndex = M3_ACCENTS.indexOf(currentAccent);
   if (accentIndex === -1) accentIndex = 0;
@@ -52,9 +51,6 @@
     return new Date().toLocaleTimeString('en-GB', { hour12: false });
   }
 
-  // =========================================================
-  // AUTO-MARQUEE ENGINE (Buttons, Terminal Titles, Selects, Inputs)
-  // =========================================================
   function wrapSpanWithMarquee(spanEl) {
     if (!spanEl || spanEl.classList.contains('marquee-clip') || spanEl.querySelector('.marquee-track')) return;
     const text = spanEl.textContent;
@@ -67,10 +63,8 @@
   }
 
   function setupMarqueeElements() {
-    // 1. Buttons & Nav Items & Terminal Titles
     document.querySelectorAll('.m3-btn > span, .nav-item > span, .terminal-title > span:last-child').forEach(wrapSpanWithMarquee);
 
-    // 2. Select Dropdowns (<select class="m3-select">)
     document.querySelectorAll('select.m3-select').forEach((sel) => {
       if (sel.parentElement && sel.parentElement.classList.contains('select-wrap')) return;
       const wrap = document.createElement('div');
@@ -87,7 +81,6 @@
       syncSelectOverlay(sel);
     });
 
-    // 3. Input Placeholders (<input class="m3-input" placeholder="...">)
     document.querySelectorAll('input.m3-input[placeholder]').forEach((inp) => {
       if (inp.parentElement && inp.parentElement.classList.contains('input-wrap')) return;
       const wrap = document.createElement('div');
@@ -257,7 +250,6 @@
     }
   }
 
-  // Navigasi Tab
   document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.nav-item').forEach((b) => b.classList.remove('active'));
@@ -266,7 +258,6 @@
       const tabId = btn.dataset.tab;
       document.getElementById('tab-' + tabId).classList.add('active');
 
-      // Hitung ulang marquee pada tab yang baru dibuka (karena sebelumnya display: none)
       requestAnimationFrame(refreshAllMarquees);
 
       if ((tabId === 'freeze' || tabId === 'debloat') && pkgState.system.length === 0 && pkgState.user.length === 0) {
@@ -277,7 +268,6 @@
     });
   });
 
-  // Tombol ganti palet warna aksen AMOLED Dark Red
   document.getElementById('accent-cycle-btn').addEventListener('click', () => {
     accentIndex = (accentIndex + 1) % M3_ACCENTS.length;
     const chosen = M3_ACCENTS[accentIndex];
@@ -285,7 +275,6 @@
     setStoredAccent(chosen);
   });
 
-  // Tombol Clear di masing-masing Terminal
   document.querySelectorAll('.term-clear-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const target = document.getElementById(btn.dataset.target);
@@ -335,7 +324,6 @@
     loadStats();
   });
 
-  // Flush RAM Actions -> Log ke Optimizer Terminal
   document.querySelectorAll('.action-flush').forEach((btn) => {
     btn.addEventListener('click', async () => {
       const mode = btn.dataset.mode;
@@ -346,7 +334,6 @@
     });
   });
 
-  // Cache Cleaner Actions -> Log ke Optimizer Terminal
   document.getElementById('btn-clean-now').addEventListener('click', async () => {
     writeTerm('opt-terminal-body', 'opt-term-dot', '$ /system/bin/cleaner\nCleaning application caches...', true);
     const res = await apiCall('clean');
@@ -368,7 +355,6 @@
     loadStats();
   });
 
-  // Load Daftar Paket
   async function loadPackages(selectedUser) {
     const user = (typeof selectedUser === 'string' && selectedUser)
       ? selectedUser
@@ -384,7 +370,6 @@
     }
   }
 
-  // Render Daftar Freeze APK (Tombol Seragam)
   function renderFreezeList() {
     const filter = document.getElementById('freeze-filter-select').value;
     const q = (document.getElementById('freeze-search').value || '').toLowerCase().trim();
@@ -459,7 +444,6 @@
     doFreezeAction('unfreeze', pkg);
   });
 
-  // Render Daftar Debloat APK (Tombol Seragam)
   function renderDebloatList() {
     const filter = document.getElementById('debloat-filter-select').value;
     const q = (document.getElementById('debloat-search').value || '').toLowerCase().trim();
@@ -537,7 +521,6 @@
     doDebloatAction('restore', pkg);
   });
 
-  // Filter & Search Listeners
   document.getElementById('freeze-user-select').addEventListener('change', (e) => loadPackages(e.target.value));
   document.getElementById('freeze-filter-select').addEventListener('change', renderFreezeList);
   document.getElementById('freeze-search').addEventListener('input', renderFreezeList);
@@ -554,7 +537,6 @@
     loadPackages(document.getElementById('debloat-user-select').value);
   });
 
-  // Logs Tab
   async function loadLogs() {
     const res = await apiCall('logs');
     if (res && res.status === 'ok') {

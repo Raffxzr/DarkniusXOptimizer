@@ -2,9 +2,12 @@
 SKIPUNZIP=1
 ASH_STANDALONE=1
 
+VERSION=$(sed -n 's/^version=//p' "$MODPATH/module.prop" 2>/dev/null | tr -d '\r')
+[ -z "$VERSION" ] && VERSION="v1.4"
+
 print_banner() {
   ui_print "************************************************"
-  ui_print "              RaffOptimizer v1.3                "
+  ui_print "              RaffOptimizer ${VERSION}           "
   ui_print "              Author : Raffxzr                  "
   ui_print "************************************************"
 }
@@ -24,20 +27,13 @@ ui_print "- Extracting RaffOptimizer module files..."
 unzip -o "$ZIPFILE" -x 'META-INF/*' '.git/*' -d "$MODPATH" >&2
 
 # Setup persistent directory in /data/adb/raffoptimizer
-mkdir -p /data/adb/raffoptimizer/cleaner
-mkdir -p /data/adb/raffoptimizer/run
-mkdir -p /data/adb/raffoptimizer/config
-
+mkdir -p /data/adb/raffoptimizer/cleaner /data/adb/raffoptimizer/run /data/adb/raffoptimizer/config
 cp -af "$MODPATH/cleaner/"* /data/adb/raffoptimizer/cleaner/
 
-# Handle devices without /system/xbin by copying flush binaries to /system/bin as well
-if [ ! -d /system/xbin ]; then
-  ui_print "- /system/xbin directory not found, copying flush binaries to /system/bin..."
+# Copy flush binaries to system/bin so both paths work
+if [ -d "$MODPATH/system/xbin" ]; then
   cp -af "$MODPATH/system/xbin/"* "$MODPATH/system/bin/" 2>/dev/null
-  rm -rf "$MODPATH/system/xbin"
-else
-  # Copy to system/bin as well so both paths work seamlessly
-  cp -af "$MODPATH/system/xbin/"* "$MODPATH/system/bin/" 2>/dev/null
+  [ ! -d /system/xbin ] && rm -rf "$MODPATH/system/xbin"
 fi
 
 ui_print "- Setting permissions..."
@@ -51,4 +47,4 @@ set_perm "$MODPATH/action.sh" 0 0 0755
 set_perm "$MODPATH/uninstall.sh" 0 0 0755
 set_perm "$MODPATH/webroot/cgi-bin/api.sh" 0 0 0755
 
-ui_print "- RaffOptimizer v1.3 installation complete! Please reboot your device."
+ui_print "- RaffOptimizer ${VERSION} installation complete! Please reboot your device."

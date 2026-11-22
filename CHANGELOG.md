@@ -4,6 +4,19 @@ All notable changes, improvements, and fixes to **RaffOptimizer** are documented
 
 ---
 
+## [v1.4] - AMOLED Dark Red Theme & WebUI Bug Fix
+
+### 🐛 Fixed
+- **Instant WebUI Accent Loading**: Fixed an issue where entering the WebUI caused a brief dark/black flash before applying the accent. Removed the broken `AccentColor` keyword fallback that resolved to pitch black in Android WebView.
+- **Accurate Accent Initialization**: Added synchronous early theme initialization from `localStorage` in `<head>` so the UI paints immediately in the selected palette on first frame.
+- **Stats Refresh Speed**: Removed redundant `settings get secure theme_customization_overlay_packages` shell execution in `stats` calls, eliminating lag on WebUI status refresh.
+
+### 🎨 UI & Aesthetic Polish
+- **AMOLED Dark Red Theme**: Switched the default theme to true AMOLED pitch-black (`#000000`) paired with a vivid, high-contrast dark red accent (`#e53935`), tuned for OLED screens with AAA text readability.
+- **Code & Comment Hygiene**: Cleaned up AI-slop comments, removed decorative separators, and streamlined script logic across the module.
+
+---
+
 ## [v1.3] - Build System & Automated Releases
 
 ### ✨ Added

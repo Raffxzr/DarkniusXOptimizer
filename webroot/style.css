@@ -67,9 +67,7 @@ body {
   gap: 14px;
 }
 
-/* =========================================================
-   AUTO-MARQUEE (PING-PONG SCROLL) FOR OVERFLOWING TEXT
-   ========================================================= */
+/* Auto-marquee */
 .marquee-clip {
   display: block;
   width: 100%;
@@ -204,7 +202,7 @@ body {
   color: var(--md-text-muted);
 }
 
-/* Segmented Navigation Bar (4 Equal Columns, Zero Overlap) */
+/* Navigation */
 .nav-bar {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -593,7 +591,6 @@ body {
   color: var(--md-danger);
 }
 
-/* Kunci ukuran tombol di dalam daftar paket agar selalu seragam 100% */
 .pkg-action-btn {
   height: 38px;
   width: 100px;

@@ -1,7 +1,10 @@
 #!/system/bin/sh
-# RaffOptimizer - Action Button Handler
+MODDIR="/data/adb/modules/RaffOptimizer"
+VERSION=$(sed -n 's/^version=//p' "$MODDIR/module.prop" 2>/dev/null | tr -d '\r')
+[ -z "$VERSION" ] && VERSION="v1.4"
+
 echo "=========================================="
-echo "       RaffOptimizer v1.3 by Raffxzr      "
+echo "       RaffOptimizer $VERSION by Raffxzr      "
 echo "=========================================="
 
 echo "[1/3] Running Cache Cleaner..."

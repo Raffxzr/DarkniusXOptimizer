@@ -17,9 +17,7 @@ BUILD_DIR="${BUILD_DIR:-${ROOT_DIR}/build}"
 DIST_DIR="${DIST_DIR:-${ROOT_DIR}/dist}"
 STAGE_DIR="${BUILD_DIR}/module"
 
-# ---------------------------------------------------------------------------
 # Read and validate module metadata
-# ---------------------------------------------------------------------------
 prop() {
   sed -n "s/^$1=//p" "${ROOT_DIR}/module.prop" | tr -d '\r' | head -n 1
 }
@@ -54,9 +52,7 @@ if grep -rIl $'\r' "${ROOT_DIR}/scripts" "${ROOT_DIR}/cleaner" \
   exit 1
 fi
 
-# ---------------------------------------------------------------------------
 # Stage a clean module tree
-# ---------------------------------------------------------------------------
 rm -rf "${STAGE_DIR}" "${OUTPUT}"
 mkdir -p "${STAGE_DIR}" "${DIST_DIR}"
 
@@ -92,9 +88,7 @@ for script in raff raff-debloat raff-flush raff-freeze raff-webui cleaner; do
   install -m 0755 "${ROOT_DIR}/scripts/${script}" "${STAGE_DIR}/system/bin/${script}"
 done
 
-# ---------------------------------------------------------------------------
 # Normalise permissions inside the zip
-# ---------------------------------------------------------------------------
 find "${STAGE_DIR}" -type d -exec chmod 0755 {} +
 find "${STAGE_DIR}" -type f -exec chmod 0644 {} +
 
@@ -109,9 +103,7 @@ chmod 0755 "${STAGE_DIR}/system/bin/"*
 chmod 0755 "${STAGE_DIR}/system/xbin/"*
 chmod 0755 "${STAGE_DIR}/cleaner/"*
 
-# ---------------------------------------------------------------------------
 # Package and verify
-# ---------------------------------------------------------------------------
 (
   cd "${STAGE_DIR}"
   zip -r -9 -X "${OUTPUT}" . \

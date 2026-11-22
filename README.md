@@ -84,7 +84,7 @@ Releases are fully automated. Bump `version` / `versionCode` in `module.prop`,
 add the matching section to `CHANGELOG.md`, commit, then push a tag:
 
 ```bash
-git tag v1.3
+git tag v1.4
 git push origin main --tags
 ```
 
