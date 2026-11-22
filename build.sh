@@ -80,7 +80,7 @@ cp -R "${ROOT_DIR}/cleaner/." "${STAGE_DIR}/cleaner/"
 
 # Single source of truth: scripts/ -> system/bin/
 mkdir -p "${STAGE_DIR}/system/bin"
-for script in darknius dx raff raff-debloat raff-flush raff-freeze raff-webui cleaner darknius-lod darknius-thermal darknius-fstrim darknius-vm darknius-doze; do
+for script in darknius dx raff raff-debloat raff-flush raff-freeze raff-webui cleaner darknius-lod darknius-thermal darknius-fstrim darknius-vm darknius-doze darknius-flush darknius-freeze darknius-debloat darknius-webui; do
   if [ ! -f "${ROOT_DIR}/scripts/${script}" ]; then
     echo "error: missing source script scripts/${script}" >&2
     exit 1
@@ -126,6 +126,10 @@ for required in \
   system/bin/darknius-fstrim \
   system/bin/darknius-vm \
   system/bin/darknius-doze \
+  system/bin/darknius-flush \
+  system/bin/darknius-freeze \
+  system/bin/darknius-debloat \
+  system/bin/darknius-webui \
   cleaner/cleaner.service \
   webroot/index.html \
   webroot/cgi-bin/api.sh; do
