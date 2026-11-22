@@ -1,5 +1,9 @@
 # ⚡ DarkniusX Optimizer
 
+<p align="center">
+  <img src="DarkniusX%20Module.png" alt="DarkniusX Optimizer banner" width="100%">
+</p>
+
 [![Build](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml/badge.svg)](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml)
 [![Latest release](https://img.shields.io/github/v/release/Raffxzr/DarkniusXOptimizer)](https://github.com/Raffxzr/DarkniusXOptimizer/releases/latest)
 
@@ -89,6 +93,7 @@ The flashable module zip is output to `dist/DarkniusXOptimizer-<version>.zip`.
 DarkniusXOptimizer/
 ├── build.sh                  # Single entry point packaging pipeline
 ├── module.prop               # Module metadata (id=DarkniusXOptimizer)
+├── DarkniusX Module.png      # Banner for README and root manager
 ├── update.json               # Auto-update manifest for Magisk/KernelSU
 ├── customize.sh              # Installer & universal GMS sysconfig patcher
 ├── service.sh / action.sh    # Boot services and action button hooks

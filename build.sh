@@ -62,6 +62,7 @@ echo "==> Building ${MODULE_ID} ${VERSION} (versionCode ${VERSION_CODE})"
 install -m 0644 "${ROOT_DIR}/module.prop" "${STAGE_DIR}/module.prop"
 install -m 0644 "${ROOT_DIR}/system.prop" "${STAGE_DIR}/system.prop"
 install -m 0644 "${ROOT_DIR}/LICENSE" "${STAGE_DIR}/LICENSE"
+install -m 0644 "${ROOT_DIR}/DarkniusX Module.png" "${STAGE_DIR}/DarkniusX Module.png"
 install -m 0755 "${ROOT_DIR}/customize.sh" "${STAGE_DIR}/customize.sh"
 install -m 0755 "${ROOT_DIR}/service.sh" "${STAGE_DIR}/service.sh"
 install -m 0755 "${ROOT_DIR}/action.sh" "${STAGE_DIR}/action.sh"
@@ -115,6 +116,7 @@ chmod 0755 "${STAGE_DIR}/cleaner/"*
 
 for required in \
   module.prop \
+  "DarkniusX Module.png" \
   customize.sh \
   service.sh \
   action.sh \
