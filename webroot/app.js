@@ -187,14 +187,11 @@
         const mem = await runShell("awk '/MemTotal/ {t=$2} /MemAvailable/ {a=$2} END {if(t>0) printf \"%d / %d MB (%d%%)\", (t-a)/1024, t/1024, ((t-a)*100)/t}' /proc/meminfo");
         const users = await runShell("pm list users 2>/dev/null | grep 'UserInfo{' | sed -E 's/.*UserInfo\\{([0-9]+):([^:]+):.*/\\1:\\2/' | tr '\\n' ',' | sed 's/,$//'");
         const pid = await runShell("ps -ef 2>/dev/null | grep 'crond -c /data/adb/raffoptimizer/run' | grep -v grep | awk '{print $2}' | head -n 1");
-        const accentRaw = await runShell("settings get secure theme_customization_overlay_packages 2>/dev/null");
-        const match = accentRaw && accentRaw.match(/"android\.theme\.customization\.system_palette"\s*:\s*"#?([0-9a-fA-F]{6})"/);
         return {
           status: 'ok',
           mem: mem.trim() || 'N/A',
           users: users.trim() || '0:Owner',
-          service: pid.trim() ? 'Running (PID: ' + pid.trim() + ')' : 'Stopped',
-          accent: match ? match[1] : ''
+          service: pid.trim() ? 'Running (PID: ' + pid.trim() + ')' : 'Stopped'
         };
       }
       if (action === 'flush') {

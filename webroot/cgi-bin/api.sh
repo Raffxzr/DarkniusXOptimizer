@@ -41,8 +41,7 @@ case "$action" in
     cleaner_pid=$(ps -ef 2>/dev/null | grep "crond -c /data/adb/raffoptimizer/run" | grep -v grep | awk '{print $2}' | head -n 1)
     svc_status="Stopped"
     [ -n "$cleaner_pid" ] && svc_status="Running (PID: $cleaner_pid)"
-    accent=$(settings get secure theme_customization_overlay_packages 2>/dev/null | sed -n 's/.*"android\.theme\.customization\.system_palette":"\([^"]*\)".*/\1/p')
-    printf '{"status":"ok","mem":"%s","users":"%s","service":"%s","accent":"%s"}' "$mem" "$users" "$svc_status" "$accent"
+    printf '{"status":"ok","mem":"%s","users":"%s","service":"%s"}' "$mem" "$users" "$svc_status"
     ;;
   flush)
     out=$(/system/bin/raff-flush "${param3:-safe}" 2>&1 | json_escape)
