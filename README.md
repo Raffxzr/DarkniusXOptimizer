@@ -1,7 +1,7 @@
 # ⚡ DarkniusX Optimizer
 
 <p align="center">
-  <img src="DarkniusX%20Module.png" alt="DarkniusX Optimizer banner" width="100%">
+  <img src="DarkniusX%20Module.png" alt="DarkniusX Optimizer banner" width="1024" height="571">
 </p>
 
 [![Build](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml/badge.svg)](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml)
