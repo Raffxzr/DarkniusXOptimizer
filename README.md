@@ -1,7 +1,7 @@
 # ⚡ DarkniusX Optimizer
 
-[![Build](https://github.com/Raffxzr/RaffOptimizer/actions/workflows/build.yml/badge.svg)](https://github.com/Raffxzr/RaffOptimizer/actions/workflows/build.yml)
-[![Latest release](https://img.shields.io/github/v/release/Raffxzr/RaffOptimizer)](https://github.com/Raffxzr/RaffOptimizer/releases/latest)
+[![Build](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml/badge.svg)](https://github.com/Raffxzr/DarkniusXOptimizer/actions/workflows/build.yml)
+[![Latest release](https://img.shields.io/github/v/release/Raffxzr/DarkniusXOptimizer)](https://github.com/Raffxzr/DarkniusXOptimizer/releases/latest)
 
 **DarkniusX Optimizer** (formerly *RaffOptimizer*) is a comprehensive, low-overhead device maintenance and gaming performance suite for **Magisk, KernelSU, KernelSU-Next, and APatch**.
 
@@ -76,8 +76,8 @@ It combines advanced gaming graphics scaling, thermal unthrottling, universal GM
 Requirements: `bash`, `zip`, and `unzip`.
 
 ```bash
-git clone https://github.com/Raffxzr/RaffOptimizer.git
-cd RaffOptimizer
+git clone https://github.com/Raffxzr/DarkniusXOptimizer.git
+cd DarkniusXOptimizer
 ./build.sh
 ```
 
