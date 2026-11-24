@@ -99,22 +99,20 @@
           <span id="stat-lod" class="tonal-badge">Checking...</span>
         </div>
 
-        <div class="filter-row">
-          <select id="lod-target-select" class="m3-select">
-            <option value="com.dts.freefireth">Target: Free Fire (com.dts.freefireth)</option>
-            <option value="com.dts.freefiremax">Target: Free Fire MAX (com.dts.freefiremax)</option>
-            <option value="com.mobile.legends">Target: Mobile Legends (com.mobile.legends)</option>
-            <option value="com.pubg.imobile">Target: BGMI / PUBG (com.pubg.imobile)</option>
-            <option value="com.tencent.ig">Target: PUBG Mobile Global (com.tencent.ig)</option>
-            <option value="all">Target: Global (All Apps &amp; Games)</option>
-            <option value="custom">Target: Custom Package Name...</option>
-          </select>
-        </div>
+        <select id="lod-target-select" class="m3-select">
+          <option value="com.dts.freefireth">Target: Free Fire (com.dts.freefireth)</option>
+          <option value="com.dts.freefiremax">Target: Free Fire MAX (com.dts.freefiremax)</option>
+          <option value="com.mobile.legends">Target: Mobile Legends (com.mobile.legends)</option>
+          <option value="com.pubg.imobile">Target: BGMI / PUBG (com.pubg.imobile)</option>
+          <option value="com.tencent.ig">Target: PUBG Mobile Global (com.tencent.ig)</option>
+          <option value="all">Target: Global (All Apps &amp; Games)</option>
+          <option value="custom">Target: Custom Package Name...</option>
+        </select>
         <input type="text" id="lod-custom-pkg" class="m3-input" placeholder="Enter custom package (e.g., com.dts.freefireth)" style="display:none;" />
 
         <div class="button-row-equal">
           <button id="btn-lod-enable" type="button" class="m3-btn filled">
-            <span>Enable LOD (Grafik MC)</span>
+            <span>Enable LOD</span>
           </button>
           <button id="btn-lod-disable" type="button" class="m3-btn outlined-danger">
             <span>Disable LOD</span>
@@ -127,18 +125,151 @@
         <div class="card-header">
           <div class="card-title-wrap">
             <h2>Darknius Thermal Killer</h2>
-            <p class="card-desc">Terminate vendor throttling services (mi_thermald, thermal-engine) and unconstrain CPU/GPU frequencies.</p>
+            <p class="card-desc">Disable vendor thermal services, SoC limits, KGSL/Mali throttling, and thermal zones with Auto or Static profiles.</p>
           </div>
           <span id="stat-thermal" class="tonal-badge">Checking...</span>
         </div>
 
         <div class="button-row-equal">
           <button id="btn-thermal-enable" type="button" class="m3-btn filled">
-            <span>Kill Thermal Throttling</span>
+            <span>Enable Killer</span>
           </button>
           <button id="btn-thermal-disable" type="button" class="m3-btn tonal">
-            <span>Restore Stock Thermal</span>
+            <span>Restore Stock</span>
           </button>
+        </div>
+
+        <div class="manual-action-box">
+          <div class="filter-row">
+            <select id="therm-mode-select" class="m3-select">
+              <option value="static">Mode: Static</option>
+              <option value="auto">Mode: Auto</option>
+            </select>
+            <select id="therm-zone-select" class="m3-select">
+              <option value="spoof">Zone: Spoof 30°C</option>
+              <option value="kill">Zone: Kill</option>
+            </select>
+          </div>
+
+          <div id="therm-policy-wrap">
+            <select id="therm-policy-select" class="m3-select">
+              <option value="stepwise">Policy: stepwise</option>
+            </select>
+          </div>
+
+          <div class="switch-list">
+            <label class="m3-switch-row">
+              <div class="m3-switch-info">
+                <span class="m3-switch-title">Aggressive Mode</span>
+                <span class="m3-switch-sub">Deep SoC, init services, &amp; GPU unthrottling</span>
+              </div>
+              <span class="m3-switch">
+                <input type="checkbox" id="therm-agg-switch" />
+                <span class="m3-switch-track"></span>
+                <span class="m3-switch-thumb"></span>
+              </span>
+            </label>
+
+            <label class="m3-switch-row" id="therm-hal-row" style="display:none;">
+              <div class="m3-switch-info">
+                <span class="m3-switch-title">Disable Thermal HAL</span>
+                <span class="m3-switch-sub">Bind-mount thermal HAL libs &amp; binaries</span>
+              </div>
+              <span class="m3-switch">
+                <input type="checkbox" id="therm-hal-switch" />
+                <span class="m3-switch-track"></span>
+                <span class="m3-switch-thumb"></span>
+              </span>
+            </label>
+
+            <label class="m3-switch-row">
+              <div class="m3-switch-info">
+                <span class="m3-switch-title">Disable Kernel Panic</span>
+                <span class="m3-switch-sub">Silence kernel panic, tracing &amp; debug logs</span>
+              </div>
+              <span class="m3-switch">
+                <input type="checkbox" id="therm-panic-switch" />
+                <span class="m3-switch-track"></span>
+                <span class="m3-switch-thumb"></span>
+              </span>
+            </label>
+
+            <label class="m3-switch-row" id="therm-charge-row" style="display:none;">
+              <div class="m3-switch-info">
+                <span class="m3-switch-title">Fast Charge Bypass</span>
+                <span class="m3-switch-sub">Bypass charging thermal caps while plugged in</span>
+              </div>
+              <span class="m3-switch">
+                <input type="checkbox" id="therm-charge-switch" />
+                <span class="m3-switch-track"></span>
+                <span class="m3-switch-thumb"></span>
+              </span>
+            </label>
+          </div>
+
+          <div id="therm-apps-section" style="display:none; flex-direction:column; gap:10px; margin-top:4px;">
+            <div class="card-title-wrap">
+              <h3 style="font-size:0.88rem; font-weight:600;">Auto Mode Target Apps</h3>
+              <p class="card-desc">Thermal killer activates automatically when opening these apps. Tap a chip to customize.</p>
+            </div>
+
+            <div class="filter-row">
+              <select id="therm-app-picker" class="m3-select">
+                <option value="">Select installed app...</option>
+              </select>
+              <button id="btn-therm-app-add" type="button" class="m3-btn tonal-primary">
+                <span>Add App</span>
+              </button>
+            </div>
+
+            <div id="therm-app-chips" class="whitelist-chips">
+              <span style="font-size:0.78rem; color:var(--md-text-muted);">No target apps configured.</span>
+            </div>
+
+            <div id="therm-app-editor" class="app-override-box" style="display:none;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                <strong id="therm-edit-pkg" style="font-size:0.82rem; word-break:break-all;"></strong>
+                <button id="btn-therm-edit-remove" type="button" class="m3-btn compact outlined-danger">
+                  <span>Remove</span>
+                </button>
+              </div>
+              <div class="filter-row">
+                <select id="therm-edit-zone" class="m3-select">
+                  <option value="spoof">Zone: 30°C</option>
+                  <option value="kill">Zone: Kill</option>
+                </select>
+                <select id="therm-edit-policy" class="m3-select">
+                  <option value="stepwise">Policy: stepwise</option>
+                </select>
+              </div>
+              <div class="switch-list">
+                <label class="m3-switch-row">
+                  <span class="m3-switch-title">Per-App Aggressive Mode</span>
+                  <span class="m3-switch">
+                    <input type="checkbox" id="therm-edit-agg" />
+                    <span class="m3-switch-track"></span>
+                    <span class="m3-switch-thumb"></span>
+                  </span>
+                </label>
+                <label class="m3-switch-row" id="therm-edit-hal-row" style="display:none;">
+                  <span class="m3-switch-title">Per-App Disable HAL</span>
+                  <span class="m3-switch">
+                    <input type="checkbox" id="therm-edit-hal" />
+                    <span class="m3-switch-track"></span>
+                    <span class="m3-switch-thumb"></span>
+                  </span>
+                </label>
+              </div>
+              <div class="button-row-equal">
+                <button id="btn-therm-edit-save" type="button" class="m3-btn filled compact">
+                  <span>Save App Rule</span>
+                </button>
+                <button id="btn-therm-edit-reset" type="button" class="m3-btn tonal compact">
+                  <span>Use Global</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -154,10 +285,10 @@
 
         <div class="button-grid-3">
           <button type="button" class="m3-btn tonal-primary btn-vm-preset" data-mode="gaming">
-            <span>Gaming (ZRAM 160)</span>
+            <span>Gaming (160)</span>
           </button>
           <button type="button" class="m3-btn tonal btn-vm-preset" data-mode="balance">
-            <span>Balance (Stock 60)</span>
+            <span>Balance (60)</span>
           </button>
           <button type="button" class="m3-btn tonal-secondary btn-vm-preset" data-mode="multitasking">
             <span>Multitask (120)</span>
@@ -181,7 +312,7 @@
 
         <div class="button-row-equal">
           <button id="btn-doze-start" type="button" class="m3-btn filled">
-            <span>Start Deep Sleep Daemon</span>
+            <span>Start Daemon</span>
           </button>
           <button id="btn-doze-stop" type="button" class="m3-btn outlined-danger">
             <span>Stop Daemon</span>
