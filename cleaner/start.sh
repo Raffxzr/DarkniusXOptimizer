@@ -10,7 +10,7 @@ service_log="/data/adb/darkniusx/run/service.log"
 mkdir -p /data/adb/darkniusx/run
 
 if [ ! -d "${moddir}" ] || [ ! -d "${scripts_dir}" ]; then
-  echo "Error: RaffOptimizer directories not found" >&2
+  echo "Error: DarkniusX directories not found" >&2
   exit 1
 fi
 

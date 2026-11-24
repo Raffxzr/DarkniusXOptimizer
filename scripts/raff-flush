@@ -32,7 +32,7 @@ show_toast() {
   local msg="$1"
   # Try ShowToast broadcast/activity if installed, plus cmd notification
   am startservice -n "com.android.showtoast/.ShowToastService" --es "text" "$msg" >/dev/null 2>&1 || true
-  cmd notification post -S bigtext -t "RaffOptimizer" "raff_flush" "$msg" >/dev/null 2>&1 || true
+  cmd notification post -S bigtext -t "DarkniusX" "darknius_flush" "$msg" >/dev/null 2>&1 || true
 }
 
 native_flush() {
@@ -90,6 +90,6 @@ fi
 native_flush "$mode"
 
 after_mem=$(get_mem_info)
-msg="RaffOptimizer Flush ($mode) completed! RAM: $after_mem"
+msg="DarkniusX Flush ($mode) done. RAM: $after_mem"
 echo "[$(date +'%Y-%m-%d %H:%M:%S')] $msg" | tee -a "$LOGFILE"
 show_toast "$msg"

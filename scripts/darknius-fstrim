@@ -1,26 +1,24 @@
 #!/system/bin/sh
-# DarkniusX - Storage Fstrim Optimizer
 LOGFILE="/data/adb/darkniusx/run/fstrim.log"
 mkdir -p /data/adb/darkniusx/run
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] Starting Fstrim Storage Optimization..." | tee -a "$LOGFILE"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Running fstrim..." | tee -a "$LOGFILE"
 
 trimmed_any=false
 for part in /data /cache /system /vendor /product; do
   if [ -d "$part" ]; then
     out=$(fstrim -v "$part" 2>&1)
     if [ $? -eq 0 ]; then
-      echo "  ✓ $part: $out" | tee -a "$LOGFILE"
+      echo "  [OK] $part: $out" | tee -a "$LOGFILE"
       trimmed_any=true
     fi
   fi
 done
 
 if [ "$trimmed_any" = false ]; then
-  # Fallback to general system idle maintenance
   echo "  Running Android system idle-maintenance..." | tee -a "$LOGFILE"
   cmd activity idle-maintenance >/dev/null 2>&1 || true
-  echo "  ✓ Storage idle maintenance triggered." | tee -a "$LOGFILE"
+  echo "  [OK] Storage idle maintenance triggered." | tee -a "$LOGFILE"
 fi
 
-echo "[$(date +'%Y-%m-%d %H:%M:%S')] Fstrim completed successfully." | tee -a "$LOGFILE"
+echo "[$(date +'%Y-%m-%d %H:%M:%S')] Fstrim finished." | tee -a "$LOGFILE"

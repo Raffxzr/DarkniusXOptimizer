@@ -333,7 +333,7 @@
   }
 
   function getPackageSafety(pkg, isSystem) {
-    if (!isSystem) return { level: 'safety-safe', label: '🟢 Safe' };
+    if (!isSystem) return { level: 'safety-safe', label: 'Safe' };
 
     const criticals = [
       'android',
@@ -350,7 +350,7 @@
       'com.android.providers.settings'
     ];
     if (criticals.includes(pkg)) {
-      return { level: 'safety-critical', label: '🔴 Critical' };
+      return { level: 'safety-critical', label: 'Critical' };
     }
 
     const cautions = [
@@ -368,15 +368,15 @@
       'com.google.android.webview'
     ];
     if (cautions.includes(pkg)) {
-      return { level: 'safety-caution', label: '🟡 Caution' };
+      return { level: 'safety-caution', label: 'Caution' };
     }
 
     const bloatPatterns = /facebook|instagram|tiktok|netflix|spotify|amazon|analytics|telemetry|feedback|gamecenter|browser|weather|music|video|bloat|retail|lens|youtube|chrome|gmail|maps|docs|drive/i;
     if (bloatPatterns.test(pkg)) {
-      return { level: 'safety-safe', label: '🟢 Safe' };
+      return { level: 'safety-safe', label: 'Safe' };
     }
 
-    return { level: 'safety-caution', label: '🟡 Caution' };
+    return { level: 'safety-caution', label: 'Caution' };
   }
 
   document.querySelectorAll('.nav-item').forEach((btn) => {

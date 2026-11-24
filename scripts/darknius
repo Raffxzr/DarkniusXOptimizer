@@ -4,7 +4,7 @@ MODDIR="/data/adb/modules/DarkniusXOptimizer"
 DATA_DIR="/data/adb/darkniusx"
 PROPFILE="${MODDIR}/module.prop"
 VERSION=$(sed -n 's/^version=//p' "$PROPFILE" 2>/dev/null | tr -d '\r')
-[ -z "$VERSION" ] && VERSION="v1.5"
+[ -z "$VERSION" ] && VERSION="v1.6"
 
 usage() {
   echo "=========================================================="

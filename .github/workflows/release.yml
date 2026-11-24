@@ -76,7 +76,7 @@ jobs:
           ' CHANGELOG.md > release-notes.md
 
           if [ ! -s release-notes.md ]; then
-            echo "DarkniusX Optimizer ${version}" > release-notes.md
+            echo "${version}" > release-notes.md
           fi
 
       - name: Create or update GitHub release
@@ -89,11 +89,11 @@ jobs:
           if gh release view "${tag}" >/dev/null 2>&1; then
             gh release upload "${tag}" "${zip}" --clobber
             gh release edit "${tag}" \
-              --title "DarkniusX Optimizer ${tag}" \
+              --title "${tag}" \
               --notes-file release-notes.md
           else
             gh release create "${tag}" "${zip}" \
-              --title "DarkniusX Optimizer ${tag}" \
+              --title "${tag}" \
               --notes-file release-notes.md \
               --verify-tag
           fi

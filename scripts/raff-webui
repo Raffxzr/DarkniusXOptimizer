@@ -22,12 +22,12 @@ chmod 0755 "${WEBROOT}/cgi-bin/api.sh" 2>/dev/null
 start_webui() {
   stop_webui >/dev/null 2>&1
   "${busybox_bin}" httpd -p 127.0.0.1:8899 -h "${WEBROOT}"
-  echo "RaffOptimizer WebUI is running at: http://127.0.0.1:8899"
+  echo "DarkniusX WebUI running at: http://127.0.0.1:8899"
 }
 
 stop_webui() {
   pkill -f "httpd -p 127.0.0.1:8899" 2>/dev/null || true
-  echo "RaffOptimizer WebUI stopped."
+  echo "DarkniusX WebUI stopped."
 }
 
 case "${1:-start}" in

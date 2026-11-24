@@ -21,11 +21,11 @@ log() {
 
 cleaner() {
   log info "$(date)"
-  log info "RaffOptimizer Cache Cleaner is running!"
-  log info "Cleaning apps cache..."
+  log info "DarkniusX Cache Cleaner started"
+  log info "Cleaning app cache..."
 
   echo "$(date)" > "${LOGFILE}"
-  echo "$(date +"[%H:%M %z]") [info]: Cleaning apps cache... (Manual/Terminal)" >> "${LOGFILE}"
+  echo "$(date +"[%H:%M %z]") [info]: Cleaning app cache (Manual)" >> "${LOGFILE}"
 
   total=0
   for dir in "/data/data/*/cache" "/data/data/*/code_cache" "/data/user_de/*/*/cache" "/data/user_de/*/*/code_cache" "/sdcard/Android/data/*/cache" "/data/system/dropbox"; do
@@ -36,7 +36,7 @@ cleaner() {
     find $dir/* -delete >/dev/null 2>&1
   done
 
-  echo "$(date +"[%H:%M %z]") [info]: Done! The apps cache has been cleaned!" >> "${LOGFILE}"
+  echo "$(date +"[%H:%M %z]") [info]: Cache clean finished." >> "${LOGFILE}"
 
   if [ "${total}" -ge 1024 ]; then
     total_cache="$(( total / 1024 )) MB"
@@ -47,17 +47,16 @@ cleaner() {
   escaped_total_cache=$(printf '%s\n' "${total_cache}" | sed -e 's/[\/&]/\\&/g')
 
   if [ -f "$PROPFILE" ]; then
-    sed -Ei "s/^description=.*/description=[ $current_time | RaffOptimizer | Cleaned Cache: ${escaped_total_cache} ] All-in-One RAM Flusher, Cache Cleaner, Multi-User App Freezer \& APK Debloater./g" "$PROPFILE"
+    sed -Ei "s/^description=.*/description=[ $current_time | Cleaned Cache: ${escaped_total_cache} ] DarkniusX Optimizer/g" "$PROPFILE"
   fi
 
   log info "Total Cache Cleaned: ${total_cache}"
-  log info "Done! The apps cache has been cleaned!"
+  log info "Done."
 }
 
 if [ "$(id -u)" -ne 0 ]; then
-  log info "Run this command with root privileges (su -c cleaner)!"
+  log info "Run with root (su -c cleaner)"
   exit 1
 else
-  log info "Running RaffOptimizer Cache Cleaner..."
   cleaner
 fi

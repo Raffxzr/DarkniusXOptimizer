@@ -2,7 +2,7 @@
 MODDIR="/data/adb/modules/DarkniusXOptimizer"
 [ ! -d "$MODDIR" ] && MODDIR="/data/adb/modules/RaffOptimizer"
 VERSION=$(sed -n 's/^version=//p' "$MODDIR/module.prop" 2>/dev/null | tr -d '\r')
-[ -z "$VERSION" ] && VERSION="v1.5"
+[ -z "$VERSION" ] && VERSION="v1.6"
 
 echo "=========================================================="
 echo "          DarkniusX Optimizer $VERSION by Raffxzr         "

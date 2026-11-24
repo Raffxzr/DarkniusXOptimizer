@@ -1,8 +1,8 @@
 id=DarkniusXOptimizer
 name=DarkniusX Optimizer
-version=v1.5
-versionCode=150
+version=v1.6
+versionCode=160
 author=Raffxzr
-description=Extreme Android Optimizer: Pixel LOD Scaler (Grafik MC), Darknius Thermal Killer, Smart GMS Doze & Deep Sleep, Fstrim, Kernel VM Tuner, Multi-Mode RAM Flusher, Cache Cleaner & AMOLED WebUI.
+description=Android performance & maintenance module: Pixel LOD Scaler (Grafik MC), Thermal Killer, GMS Doze, Fstrim, VM Tuner, RAM Flusher, Cache Cleaner, and WebUI.
 updateJson=https://raw.githubusercontent.com/Raffxzr/DarkniusXOptimizer/main/update.json
 banner=DarkniusX Module.png
