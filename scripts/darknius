@@ -17,7 +17,7 @@ usage() {
   echo "  clean                 - Run cache cleaner immediately"
   echo "  flush [mode]          - Flush RAM (safe|aggressive|extreme|custom)"
   echo "  lod [on|off|pkg]      - Pixel LOD Scaler (Grafik MC) per-app or global"
-  echo "  thermal [on|off]      - Darknius Thermal Killer (bypass thermal limits)"
+  echo "  thermal [cmd]         - Darknius Thermal Killer (enable|disable|set|status)"
   echo "  fstrim                - Trim /data, /cache, and /system partitions"
   echo "  vm [mode]             - Set Kernel VM tuning (balance|gaming|multitasking)"
   echo "  doze [on|off]         - Toggle Smart Screen-Off Deep Sleep"

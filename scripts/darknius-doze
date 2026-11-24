@@ -93,6 +93,15 @@ case "$1" in
   stop|disable|off)
     stop_daemon
     ;;
+  status-badge)
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE" 2>/dev/null)" 2>/dev/null; then
+      echo "Running"
+    elif [ -f "$FLAG_ENABLED" ]; then
+      echo "Standby"
+    else
+      echo "Disabled"
+    fi
+    ;;
   status)
     echo "Smart Deep Sleep & GMS Doze: $(get_status)"
     ;;

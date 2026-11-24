@@ -37,6 +37,29 @@ rm -rf /data/adb/modules/RaffOptimizer /data/adb/modules_update/RaffOptimizer 2>
 mkdir -p /data/adb/darkniusx/cleaner /data/adb/darkniusx/run /data/adb/darkniusx/config
 cp -af "$MODPATH/cleaner/"* /data/adb/darkniusx/cleaner/
 
+# Migrate legacy thermal flag into new thermal.conf
+if [ ! -f "/data/adb/darkniusx/config/thermal.conf" ]; then
+  LEGACY_EN=0
+  [ -f "/data/adb/darkniusx/config/thermal_killer_active" ] && LEGACY_EN=1
+  cat > /data/adb/darkniusx/config/thermal.conf <<EOF
+ENABLED=${LEGACY_EN}
+MODE=static
+AGGRESSIVE=0
+DISABLE_HAL=0
+DISABLE_PANIC=0
+ZONE_MODE=spoof
+ZPOLICY=
+FAST_CHARGE=0
+EOF
+  rm -f /data/adb/darkniusx/config/thermal_killer_active
+fi
+
+# Populate default thermal target games on fresh install
+if [ ! -s "/data/adb/darkniusx/config/thermal_apps.list" ]; then
+  GAME_REGEX="com\.dts\.freefireth|com\.dts\.freefiremax|com\.mobile\.legends|com\.tencent\.ig|com\.pubg\.imobile|com\.pubg\.krmobile|com\.vng\.pubgmobile|com\.activision\.callofduty\.shooter|com\.garena\.game\.codm|com\.miHoYo\.GenshinImpact|com\.HoYoverse\.Nap|com\.HoYoverse\.hkrpgoversea|com\.kurogame\.wutheringwaves\.global|com\.riotgames\.league\.wildrift|com\.roblox\.client|com\.axlebolt\.standoff2|com\.HoYoverse\.bh3oversea|com\.proxima\.game|com\.proximabeta\.mf\.uamo|com\.levelinfinite\.sgameGlobal"
+  pm list packages --user 0 2>/dev/null | cut -d: -f2 | grep -E "^(${GAME_REGEX})$" > /data/adb/darkniusx/config/thermal_apps.list 2>/dev/null || true
+fi
+
 # Copy flush binaries to system/bin so both paths work
 if [ -d "$MODPATH/system/xbin" ]; then
   cp -af "$MODPATH/system/xbin/"* "$MODPATH/system/bin/" 2>/dev/null

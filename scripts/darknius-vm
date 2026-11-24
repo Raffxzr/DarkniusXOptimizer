@@ -49,8 +49,19 @@ apply_profile() {
 }
 
 case "$1" in
+  set)
+    apply_profile "$2"
+    ;;
   gaming|multitasking|balance)
     apply_profile "$1"
+    ;;
+  status-badge)
+    p=$(cat "$CONF_FILE" 2>/dev/null || echo "balance")
+    case "$p" in
+      gaming) echo "Gaming (160)" ;;
+      multitasking) echo "Multitask (120)" ;;
+      *) echo "Balance (60)" ;;
+    esac
     ;;
   status)
     get_status

@@ -32,8 +32,8 @@ MODDIR=${0%/*}
   fi
 
   # 5. Restore Thermal Killer if previously active
-  if [ -f "/data/adb/darkniusx/config/thermal_killer_active" ] && [ -x "/system/bin/darknius-thermal" ]; then
-    /system/bin/darknius-thermal enable >/dev/null 2>&1 &
+  if [ -x "/system/bin/darknius-thermal" ]; then
+    /system/bin/darknius-thermal boot >/dev/null 2>&1 &
   fi
 
   # 6. Restore Pixel LOD Scaler (Grafik MC) if previously active

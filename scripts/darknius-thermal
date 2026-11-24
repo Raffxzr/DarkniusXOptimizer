@@ -1,66 +1,772 @@
 #!/system/bin/sh
-# DarkniusX - Darknius Thermal Killer
-CONFIG_DIR="/data/adb/darkniusx/config"
-FLAG_FILE="${CONFIG_DIR}/thermal_killer_active"
-mkdir -p "${CONFIG_DIR}"
+# DarkniusX - Darknius Thermal Killer Engine
 
-THERMAL_SVCS="thermal-engine mi_thermald thermald vendor.thermal-hal-1-0 vendor.thermal-hal-2-0 vendor.thermal.symlinks"
+MODDIR="/data/adb/modules/DarkniusXOptimizer"
+[ ! -d "$MODDIR" ] && MODDIR="/data/adb/modules/RaffOptimizer"
+DATA_DIR="/data/adb/darkniusx"
+CONFIG_DIR="${DATA_DIR}/config"
+RUN_DIR="${DATA_DIR}/run"
+CONF_FILE="${CONFIG_DIR}/thermal.conf"
+APPS_FILE="${CONFIG_DIR}/thermal_apps.list"
+APP_CONFS_FILE="${CONFIG_DIR}/thermal_app_configs.conf"
+PID_FILE="${RUN_DIR}/thermal.pid"
+STATE_FILE="${RUN_DIR}/thermal.state"
+LOG_FILE="${RUN_DIR}/thermal.log"
+TEMP_DUMMY="${RUN_DIR}/dummy_temp"
+HAL_DUMMY="${RUN_DIR}/dummy_hal"
+CHARGE_BACKUP="${RUN_DIR}/thermal_charge_backup"
 
-get_status() {
-  if [ -f "$FLAG_FILE" ]; then
-    echo "ENABLED (Thermal Throttling Bypassed)"
+mkdir -p "${CONFIG_DIR}" "${RUN_DIR}"
+
+DEFAULT_SVCS="thermal-engine mi_thermald thermald vendor.thermal-hal-1-0 vendor.thermal-hal-2-0 vendor.thermal.symlinks"
+
+log_msg() {
+  echo "[$(date '+%m-%d %H:%M:%S')] [$1] $2" >> "$LOG_FILE"
+}
+
+init_defaults() {
+  if [ ! -f "$CONF_FILE" ]; then
+    cat > "$CONF_FILE" <<'EOF'
+ENABLED=0
+MODE=static
+AGGRESSIVE=0
+DISABLE_HAL=0
+DISABLE_PANIC=0
+ZONE_MODE=spoof
+ZPOLICY=
+FAST_CHARGE=0
+EOF
+  fi
+  [ ! -f "$APPS_FILE" ] && : > "$APPS_FILE"
+  [ ! -f "$APP_CONFS_FILE" ] && : > "$APP_CONFS_FILE"
+}
+
+load_conf() {
+  init_defaults
+  ENABLED=0
+  MODE="static"
+  AGGRESSIVE=0
+  DISABLE_HAL=0
+  DISABLE_PANIC=0
+  ZONE_MODE="spoof"
+  ZPOLICY=""
+  FAST_CHARGE=0
+  . "$CONF_FILE" 2>/dev/null || true
+}
+
+save_conf_key() {
+  local key="$1"
+  local val="$2"
+  init_defaults
+  if grep -q "^${key}=" "$CONF_FILE" 2>/dev/null; then
+    sed -i "s|^${key}=.*|${key}=${val}|" "$CONF_FILE"
   else
-    echo "DISABLED (Stock Thermal Limits Active)"
+    echo "${key}=${val}" >> "$CONF_FILE"
   fi
 }
 
-enable_thermal_killer() {
-  echo "[Thermal Killer] Terminating vendor thermal throttling daemons..."
-  for svc in $THERMAL_SVCS; do
-    stop "$svc" 2>/dev/null || true
+write_node() {
+  local val="$1"
+  shift
+  for p in "$@"; do
+    [ -e "$p" ] || continue
+    chmod 0644 "$p" 2>/dev/null || true
+    printf '%s' "$val" > "$p" 2>/dev/null || true
   done
+}
+
+restore_node() {
+  local val="$1"
+  shift
+  for p in "$@"; do
+    [ -e "$p" ] || continue
+    chmod 0644 "$p" 2>/dev/null || true
+    printf '%s' "$val" > "$p" 2>/dev/null || true
+    chmod 0444 "$p" 2>/dev/null || true
+  done
+}
+
+apply_zone_policy() {
+  local pol="$1"
+  [ -z "$pol" ] && return 0
+  for z in /sys/class/thermal/thermal_zone*; do
+    [ -f "$z/policy" ] || continue
+    chmod 0644 "$z/policy" 2>/dev/null || true
+    printf '%s' "$pol" > "$z/policy" 2>/dev/null || true
+  done
+}
+
+list_init_thermal_services() {
+  for initdir in /system/etc/init /vendor/etc/init /odm/etc/init /product/etc/init /system_ext/etc/init; do
+    [ -d "$initdir" ] || continue
+    grep -Eh "^service[[:space:]]+(miui.*thermal|.*thermal)" "$initdir"/*.rc 2>/dev/null | awk '{print $2}'
+  done | sort -u
+}
+
+stop_thermal_services() {
+  for svc in $DEFAULT_SVCS $(list_init_thermal_services); do
+    [ -z "$svc" ] && continue
+    stop "$svc" 2>/dev/null || true
+    setprop ctl.stop "$svc" 2>/dev/null || true
+  done
+
+  if ! service check miui.mqsas.IMQSNative 2>/dev/null | grep -q "not found"; then
+    for initdir in /system/etc/init /vendor/etc/init /odm/etc/init /product/etc/init /system_ext/etc/init; do
+      [ -d "$initdir" ] || continue
+      grep -Eh "^service[[:space:]]+(miui|.*thermal)" "$initdir"/*.rc 2>/dev/null | awk '{print $2}' | while read -r msvc; do
+        [ -n "$msvc" ] && service call miui.mqsas.IMQSNative 21 i32 1 s16 "stop" i32 1 s16 "$msvc" s16 "/dev/null" i32 1 >/dev/null 2>&1 || true
+      done
+    done
+  fi
+
   pkill -9 -f "mi_thermald" 2>/dev/null || true
   pkill -9 -f "thermal-engine" 2>/dev/null || true
   pkill -9 -f "thermald" 2>/dev/null || true
-
-  # Set thermal zone modes to disabled where writable
-  for tz in /sys/class/thermal/thermal_zone*/mode; do
-    if [ -w "$tz" ]; then
-      echo "disabled" > "$tz" 2>/dev/null || true
-    fi
-  done
-
-  touch "$FLAG_FILE"
-  echo "[Thermal Killer] Thermal throttling successfully disabled! CPU/GPU will operate unconstrained."
 }
 
-disable_thermal_killer() {
-  echo "[Thermal Killer] Restoring stock thermal governors..."
-  for tz in /sys/class/thermal/thermal_zone*/mode; do
-    if [ -w "$tz" ]; then
-      echo "enabled" > "$tz" 2>/dev/null || true
+start_thermal_services() {
+  for svc in $DEFAULT_SVCS $(list_init_thermal_services); do
+    [ -z "$svc" ] && continue
+    start "$svc" 2>/dev/null || true
+    setprop ctl.start "$svc" 2>/dev/null || true
+  done
+
+  if ! service check miui.mqsas.IMQSNative 2>/dev/null | grep -q "not found"; then
+    for initdir in /system/etc/init /vendor/etc/init /odm/etc/init /product/etc/init /system_ext/etc/init; do
+      [ -d "$initdir" ] || continue
+      grep -Eh "^service[[:space:]]+(miui|.*thermal)" "$initdir"/*.rc 2>/dev/null | awk '{print $2}' | while read -r msvc; do
+        [ -n "$msvc" ] && service call miui.mqsas.IMQSNative 21 i32 1 s16 "start" i32 1 s16 "$msvc" s16 "/dev/null" i32 1 >/dev/null 2>&1 || true
+      done
+    done
+  fi
+}
+
+unmount_thermal_binds() {
+  find /sys/devices/virtual/thermal -name 'temp' -type f 2>/dev/null | while read -r tnode; do
+    if grep -qF " ${tnode} " /proc/mounts 2>/dev/null; then
+      umount "$tnode" 2>/dev/null || true
     fi
   done
 
-  for svc in $THERMAL_SVCS; do
-    start "$svc" 2>/dev/null || true
+  grep -E " (/system/lib|/vendor).*thermal| (/system/lib|/vendor).*throttl" /proc/mounts 2>/dev/null | awk '{print $2}' | while read -r hnode; do
+    [ -n "$hnode" ] && umount "$hnode" 2>/dev/null || true
+  done
+}
+
+apply_zone_spoof() {
+  echo "30000" > "$TEMP_DUMMY"
+  find /sys/devices/virtual/thermal -type f \( -name "mode" -o -name "thm_enable" \) 2>/dev/null | while read -r zf; do
+    chmod 0644 "$zf" 2>/dev/null || true
+    case "$zf" in
+      *mode) printf 'disabled' > "$zf" 2>/dev/null || true ;;
+      *) printf '0' > "$zf" 2>/dev/null || true ;;
+    esac
   done
 
-  rm -f "$FLAG_FILE"
-  echo "[Thermal Killer] Stock thermal controls re-enabled."
+  for tz in /sys/class/thermal/thermal_zone*/mode; do
+    [ -w "$tz" ] && printf 'disabled' > "$tz" 2>/dev/null || true
+  done
+
+  find /sys/devices/virtual/thermal -name 'temp' -type f 2>/dev/null | while read -r tnode; do
+    grep -qF " ${tnode} " /proc/mounts 2>/dev/null && continue
+    mount --bind "$TEMP_DUMMY" "$tnode" 2>/dev/null || true
+  done
+}
+
+apply_zone_kill() {
+  unmount_thermal_binds
+  find /sys/devices/virtual/thermal -type f -exec chmod 000 {} + 2>/dev/null || true
+}
+
+apply_hal_bind() {
+  : > "$HAL_DUMMY"
+  find /system/lib* /vendor -type f \( -iname '*thermal*' -o -iname '*throttl*' \) ! -iname '*.rc' 2>/dev/null | while read -r hfile; do
+    grep -qF " ${hfile} " /proc/mounts 2>/dev/null && continue
+    mount --bind "$HAL_DUMMY" "$hfile" 2>/dev/null || true
+  done
+}
+
+apply_soc_nodes() {
+  local is_agg="${1:-0}"
+
+  write_node "0" /proc/eem/eem_status /proc/sys/kernel/sched_boost /sys/kernel/eara_thermal/enable \
+    /sys/module/thermal/parameters/enabled /sys/module/qpnp_bsi/parameters/bcl_enabled
+  write_node "1" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+  cmd thermalservice override-status 0 >/dev/null 2>&1 || true
+
+  write_node "N" /sys/module/workqueue/parameters/power_efficient /sys/module/workqueue/parameters/disable_numa
+
+  if pm list packages com.xiaomi.joyose 2>/dev/null | grep -q "^package:com\.xiaomi\.joyose$"; then
+    cmd package uninstall -k --user 0 com.xiaomi.joyose >/dev/null 2>&1 || true
+  fi
+
+  write_node "0" /proc/cpufreq/cpufreq_imax_thermal_protect
+  write_node "1" /proc/cpufreq/cpufreq_sched_disable
+  if [ "$is_agg" = "1" ]; then
+    write_node "2" /proc/cpufreq/cpufreq_imax_enable
+    write_node "3" /proc/cpufreq/cpufreq_power_mode
+  else
+    write_node "1" /proc/cpufreq/cpufreq_imax_enable
+    write_node "0" /proc/cpufreq/cpufreq_power_mode
+  fi
+
+  for gpuf in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
+    write_node "$gpuf 1" /proc/gpufreq/gpufreq_power_limited
+  done
+
+  write_node "0" /proc/ppm/enabled
+  for idx in 2 3 4 6 7; do
+    write_node "$idx 0" /proc/ppm/policy_status
+  done
+
+  for ps in /sys/class/power_supply/*; do
+    write_node "0" "$ps/thermal_limit" "$ps/device/bcl_enabled"
+  done
+
+  local kgsl=""
+  if [ -d "/sys/class/kgsl/kgsl-3d0" ]; then
+    kgsl="/sys/class/kgsl/kgsl-3d0"
+  elif [ -d "/sys/devices/platform/soc" ]; then
+    kgsl=$(find /sys/devices/platform/soc/ -type d -path "*/kgsl/kgsl-3d0" 2>/dev/null | head -n 1)
+  fi
+  if [ -d "$kgsl" ]; then
+    write_node "0" "$kgsl/throttling" "$kgsl/bus_split" "$kgsl/max_gpuclk" "$kgsl/adreno_idler_active" "$kgsl/thermal_pwrlevel"
+    write_node "1" "$kgsl/force_no_nap" "$kgsl/force_rail_on" "$kgsl/force_bus_on" "$kgsl/force_clk_on"
+  fi
+
+  if [ -f /proc/driver/thermal/tzcpu ]; then
+    local t_limit="120"
+    [ "$is_agg" = "1" ] && t_limit="125"
+    local no_cooler="0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler 0 0 no-cooler"
+    write_node "1 ${t_limit}000 0 mtktscpu-sysrst $no_cooler 200" /proc/driver/thermal/tzcpu
+    write_node "1 ${t_limit}000 0 mtktspmic-sysrst $no_cooler 1000" /proc/driver/thermal/tzpmic
+    write_node "1 ${t_limit}000 0 mtktsbattery-sysrst $no_cooler 1000" /proc/driver/thermal/tzbattery
+    write_node "1 ${t_limit}000 0 mtk-cl-kshutdown00 $no_cooler 2000" /proc/driver/thermal/tzpa
+    write_node "1 ${t_limit}000 0 mtktscharger-sysrst $no_cooler 2000" /proc/driver/thermal/tzcharger
+    write_node "1 ${t_limit}000 0 mtktswmt-sysrst $no_cooler 1000" /proc/driver/thermal/tzwmt
+    write_node "1 ${t_limit}000 0 mtktsAP-sysrst $no_cooler 1000" /proc/driver/thermal/tzbts
+    write_node "1 ${t_limit}000 0 mtk-cl-kshutdown01 $no_cooler 1000" /proc/driver/thermal/tzbtsnrpa
+    write_node "1 ${t_limit}000 0 mtk-cl-kshutdown02 $no_cooler 1000" /proc/driver/thermal/tzbtspa
+  fi
+
+  find /sys -path '*msm_thermal*' -name 'enabled' -type f 2>/dev/null | while read -r msmf; do
+    case "$(cat "$msmf" 2>/dev/null)" in
+      Y) write_node "N" "$msmf" ;;
+      1) write_node "0" "$msmf" ;;
+    esac
+  done
+
+  for mali in /sys/devices/*.mali; do
+    [ -d "$mali" ] && chmod 000 "$mali/tmu" "$mali"/throttling* "$mali/tripping" 2>/dev/null || true
+  done
+
+  for core in /sys/devices/system/cpu/cpu[0-9]*/online; do
+    [ -f "$core" ] || continue
+    if [ "$(cat "$core" 2>/dev/null)" = "0" ]; then
+      chmod 0644 "$core" 2>/dev/null || true
+      printf '1' > "$core" 2>/dev/null || true
+    fi
+  done
+}
+
+apply_thermal_profile() {
+  local use_agg="${1:-$AGGRESSIVE}"
+  local use_pol="${2:-$ZPOLICY}"
+  local use_zone="${3:-$ZONE_MODE}"
+  local use_hal="${4:-$DISABLE_HAL}"
+
+  apply_zone_policy "$use_pol"
+  apply_soc_nodes "$use_agg"
+
+  if [ "$use_agg" = "1" ] && [ "$use_hal" = "1" ]; then
+    apply_hal_bind
+  fi
+
+  stop_thermal_services
+
+  if [ "$use_zone" = "kill" ]; then
+    apply_zone_kill
+  else
+    apply_zone_spoof
+  fi
+
+  log_msg "INFO" "Applied thermal profile (agg=${use_agg}, zone=${use_zone}, hal=${use_hal}, pol=${use_pol:-default})"
+}
+
+restore_stock_thermal() {
+  unmount_thermal_binds
+  find /sys/devices/virtual/thermal -type f -exec chmod 0644 {} + 2>/dev/null || true
+  find /sys/devices/virtual/thermal -type f \( -name "mode" -o -name "thm_enable" \) 2>/dev/null | while read -r zf; do
+    case "$zf" in
+      *mode) printf 'enabled' > "$zf" 2>/dev/null || true ;;
+      *) printf '1' > "$zf" 2>/dev/null || true ;;
+    esac
+    chmod 0444 "$zf" 2>/dev/null || true
+  done
+
+  for tz in /sys/class/thermal/thermal_zone*/mode; do
+    [ -w "$tz" ] && printf 'enabled' > "$tz" 2>/dev/null || true
+  done
+
+  for mali in /sys/devices/*.mali; do
+    [ -d "$mali" ] && chmod 0644 "$mali/tmu" "$mali"/throttling* "$mali/tripping" 2>/dev/null || true
+  done
+
+  if ! pm list packages com.xiaomi.joyose 2>/dev/null | grep -q "^package:com\.xiaomi\.joyose$"; then
+    cmd package install-existing com.xiaomi.joyose >/dev/null 2>&1 || true
+  fi
+
+  for ps in /sys/class/power_supply/*; do
+    restore_node "1" "$ps/thermal_limit" "$ps/device/bcl_enabled"
+  done
+
+  for gpuf in ignore_batt_oc ignore_batt_percent ignore_low_batt ignore_thermal_protect ignore_pbm_limited; do
+    restore_node "$gpuf 0" /proc/gpufreq/gpufreq_power_limited
+  done
+
+  restore_node "1" /proc/cpufreq/cpufreq_imax_thermal_protect /proc/cpufreq/cpufreq_power_mode
+  restore_node "0" /proc/cpufreq/cpufreq_sched_disable /proc/cpufreq/cpufreq_imax_enable
+
+  local kgsl=""
+  if [ -d "/sys/class/kgsl/kgsl-3d0" ]; then
+    kgsl="/sys/class/kgsl/kgsl-3d0"
+  elif [ -d "/sys/devices/platform/soc" ]; then
+    kgsl=$(find /sys/devices/platform/soc/ -type d -path "*/kgsl/kgsl-3d0" 2>/dev/null | head -n 1)
+  fi
+  if [ -d "$kgsl" ]; then
+    restore_node "1" "$kgsl/throttling" "$kgsl/bus_split" "$kgsl/max_gpuclk" "$kgsl/adreno_idler_active" "$kgsl/thermal_pwrlevel"
+    restore_node "0" "$kgsl/force_no_nap" "$kgsl/force_rail_on" "$kgsl/force_bus_on" "$kgsl/force_clk_on"
+  fi
+
+  if [ -f /proc/driver/thermal/tzcpu ]; then
+    local heavy="0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy 0 0 cpu_heavy"
+    restore_node "1 117000 0 mtktscpu-sysrst $heavy 200" /proc/driver/thermal/tzcpu
+    restore_node "1 117000 0 mtktspmic-sysrst $heavy 1000" /proc/driver/thermal/tzpmic
+    restore_node "1 117000 0 mtktsbattery-sysrst $heavy 1000" /proc/driver/thermal/tzbattery
+    restore_node "1 117000 0 mtk-cl-kshutdown00 $heavy 2000" /proc/driver/thermal/tzpa
+    restore_node "1 117000 0 mtktscharger-sysrst $heavy 2000" /proc/driver/thermal/tzcharger
+    restore_node "1 117000 0 mtktswmt-sysrst $heavy 1000" /proc/driver/thermal/tzwmt
+    restore_node "1 117000 0 mtktsAP-sysrst $heavy 1000" /proc/driver/thermal/tzbts
+    restore_node "1 117000 0 mtk-cl-kshutdown01 $heavy 1000" /proc/driver/thermal/tzbtsnrpa
+    restore_node "1 117000 0 mtk-cl-kshutdown02 $heavy 1000" /proc/driver/thermal/tzbtspa
+  fi
+
+  find /sys -path '*msm_thermal*' -name 'enabled' -type f 2>/dev/null | while read -r msmf; do
+    case "$(cat "$msmf" 2>/dev/null)" in
+      N) restore_node "Y" "$msmf" ;;
+      0) restore_node "1" "$msmf" ;;
+    esac
+  done
+
+  restore_node "1" /proc/ppm/enabled
+  for idx in 2 3 4 6 7; do
+    restore_node "$idx 1" /proc/ppm/policy_status
+  done
+
+  restore_node "1" /proc/eem/eem_status /proc/sys/kernel/sched_boost /sys/kernel/eara_thermal/enable \
+    /sys/module/thermal/parameters/enabled /sys/module/qpnp_bsi/parameters/bcl_enabled
+  restore_node "0" /proc/mtk_batoc_throttling/battery_oc_protect_stop
+  restore_node "Y" /sys/module/workqueue/parameters/power_efficient /sys/module/workqueue/parameters/disable_numa
+  cmd thermalservice reset >/dev/null 2>&1 || true
+
+  start_thermal_services
+  log_msg "INFO" "Restored stock thermal limits"
+}
+
+apply_panic_tuning() {
+  local disable_panic="$1"
+  local val="1"
+  local printk_val="1 1 1 1"
+  local devkmsg="on"
+  if [ "$disable_panic" = "1" ]; then
+    val="0"
+    printk_val="0 0 0 0"
+    devkmsg="off"
+  fi
+  (
+    nice -n 19 find /proc/sys/ /sys/ \( -name '*panic*' -o -name 'exception-trace' -o -name 'sched_schedstats' -o -name 'tracing_on' -o -name 'log_ecn_error' -o -name 'snapshot_crashdumper' -o -name 'use_spi_crc' \) 2>/dev/null | while read -r path; do
+      [ -f "$path" ] && { chmod +w "$path" 2>/dev/null; printf '%s' "$val" > "$path" 2>/dev/null; }
+    done
+    [ -w /proc/sys/kernel/printk ] && printf '%s' "$printk_val" > /proc/sys/kernel/printk 2>/dev/null || true
+    [ -w /proc/sys/kernel/printk_devkmsg ] && printf '%s' "$devkmsg" > /proc/sys/kernel/printk_devkmsg 2>/dev/null || true
+  ) >/dev/null 2>&1 &
+}
+
+enable_fast_charge() {
+  local base="/sys/class/power_supply"
+  : > "$CHARGE_BACKUP"
+
+  backup_and_set() {
+    local target_val="$1"
+    shift
+    for node in "$@"; do
+      [ -f "$node" ] || continue
+      local orig_val
+      orig_val=$(cat "$node" 2>/dev/null | tr -d '\r')
+      echo "$node|$orig_val" >> "$CHARGE_BACKUP"
+      chmod 0666 "$node" 2>/dev/null || true
+      printf '%s' "$target_val" > "$node" 2>/dev/null || true
+      chmod 0644 "$node" 2>/dev/null || true
+    done
+  }
+
+  backup_and_set "5750000" $base/*/constant_charge_current_max $base/*/input_current_limit $base/*/charge_control_limit $base/*/current_max
+  backup_and_set "12500000" $base/*/input_voltage_limit $base/*/voltage_max
+  backup_and_set "100" $base/*/siop_level
+  backup_and_set "570" $base/*/temp_warm $base/*/temp_hot
+
+  find /sys/devices -name charge_control_limit 2>/dev/null | while read -r cnode; do
+    write_node "0" "$cnode"
+  done
+  find /sys/kernel /sys/class -type f \( -iname '*fast_charge*' -o -iname '*boost_mode*' -o -iname '*turbo_mode*' -o -iname '*force_fast_charge*' -o -iname '*fastcharge*' \) 2>/dev/null | while read -r fnode; do
+    write_node "1" "$fnode"
+  done
+  log_msg "INFO" "Fast charge thermal bypass enabled"
+}
+
+restore_fast_charge() {
+  if [ -f "$CHARGE_BACKUP" ]; then
+    while IFS='|' read -r node val; do
+      if [ -f "$node" ] && [ -n "$val" ]; then
+        chmod 0666 "$node" 2>/dev/null || true
+        printf '%s' "$val" > "$node" 2>/dev/null || true
+        chmod 0644 "$node" 2>/dev/null || true
+      fi
+    done < "$CHARGE_BACKUP"
+    rm -f "$CHARGE_BACKUP"
+  fi
+  find /sys/devices -name charge_control_limit 2>/dev/null | while read -r cnode; do
+    write_node "1" "$cnode"
+  done
+  find /sys/kernel /sys/class -type f \( -iname '*fast_charge*' -o -iname '*boost_mode*' -o -iname '*turbo_mode*' -o -iname '*force_fast_charge*' -o -iname '*fastcharge*' \) 2>/dev/null | while read -r fnode; do
+    write_node "0" "$fnode"
+  done
+}
+
+is_fast_charge_supported() {
+  for p in /sys/class/power_supply/*/constant_charge_current_max /sys/class/power_supply/*/input_current_limit /sys/class/power_supply/*/input_voltage_limit /sys/class/power_supply/*/siop_level /sys/class/power_supply/*/temp_warm /sys/class/power_supply/*/charge_control_limit; do
+    if [ -e "$p" ]; then
+      echo "1"
+      return 0
+    fi
+  done
+  echo "0"
+}
+
+get_foreground_pkg() {
+  dumpsys activity recents 2>/dev/null | awk -F'realActivity=' '/realActivity=/ {split($2, a, "/"); print a[1]}' | head -n 5
+}
+
+daemon_loop() {
+  echo $$ > "$PID_FILE"
+  load_conf
+
+  [ -n "$ZPOLICY" ] && apply_zone_policy "$ZPOLICY"
+  [ "$DISABLE_PANIC" = "1" ] && apply_panic_tuning "1"
+
+  local applied_state="none"
+  local applied_pkg=""
+  local applied_agg=""
+  local applied_zone=""
+  local applied_hal=""
+  local fast_active="0"
+
+  while true; do
+    load_conf
+    if [ "$ENABLED" != "1" ]; then
+      break
+    fi
+
+    local want_active="0"
+    local active_pkg=""
+    local use_agg="$AGGRESSIVE"
+    local use_pol="$ZPOLICY"
+    local use_zone="$ZONE_MODE"
+    local use_hal="$DISABLE_HAL"
+
+    if [ "$MODE" = "static" ]; then
+      want_active="1"
+      active_pkg="STATIC"
+    else
+      local fg_pkgs
+      fg_pkgs=$(get_foreground_pkg)
+      if [ -s "$APP_CONFS_FILE" ]; then
+        while IFS=':' read -r c_pkg c_agg c_pol c_zone c_hal || [ -n "$c_pkg" ]; do
+          [ -z "$c_pkg" ] && continue
+          case "$fg_pkgs" in
+            *"$c_pkg"*)
+              want_active="1"
+              active_pkg="$c_pkg"
+              [ -n "$c_agg" ] && use_agg="$c_agg"
+              [ -n "$c_pol" ] && use_pol="$c_pol"
+              [ -n "$c_zone" ] && use_zone="$c_zone"
+              [ -n "$c_hal" ] && use_hal="$c_hal"
+              break
+              ;;
+          esac
+        done < "$APP_CONFS_FILE"
+      fi
+      if [ "$want_active" = "0" ] && [ -s "$APPS_FILE" ]; then
+        while read -r a_pkg || [ -n "$a_pkg" ]; do
+          [ -z "$a_pkg" ] && continue
+          case "$fg_pkgs" in
+            *"$a_pkg"*)
+              want_active="1"
+              active_pkg="$a_pkg"
+              break
+              ;;
+          esac
+        done < "$APPS_FILE"
+      fi
+    fi
+
+    local bat_status
+    bat_status=$(cat /sys/class/power_supply/battery/status 2>/dev/null)
+    if [ "$FAST_CHARGE" = "1" ] && [ "$bat_status" = "Charging" ]; then
+      if [ "$fast_active" != "1" ]; then
+        enable_fast_charge
+        fast_active="1"
+      fi
+    elif [ "$fast_active" = "1" ]; then
+      restore_fast_charge
+      fast_active="0"
+    fi
+
+    if [ "$want_active" = "1" ]; then
+      if [ "$applied_state" != "active" ] || [ "$applied_pkg" != "$active_pkg" ] || [ "$applied_agg" != "$use_agg" ] || [ "$applied_zone" != "$use_zone" ] || [ "$applied_hal" != "$use_hal" ]; then
+        apply_thermal_profile "$use_agg" "$use_pol" "$use_zone" "$use_hal"
+        applied_state="active"
+        applied_pkg="$active_pkg"
+        applied_agg="$use_agg"
+        applied_zone="$use_zone"
+        applied_hal="$use_hal"
+        echo "active|${active_pkg}" > "$STATE_FILE"
+      fi
+    else
+      if [ "$applied_state" = "active" ]; then
+        restore_stock_thermal
+        applied_state="standby"
+        applied_pkg=""
+      fi
+      echo "standby|" > "$STATE_FILE"
+    fi
+
+    sleep 5
+  done
+
+  [ "$fast_active" = "1" ] && restore_fast_charge
+  if [ "$applied_state" = "active" ]; then
+    restore_stock_thermal
+  fi
+  echo "stock|" > "$STATE_FILE"
+  rm -f "$PID_FILE"
+}
+
+stop_daemon_only() {
+  if [ -f "$PID_FILE" ]; then
+    local pid
+    pid=$(cat "$PID_FILE" 2>/dev/null)
+    [ -n "$pid" ] && kill -9 "$pid" 2>/dev/null || true
+    rm -f "$PID_FILE"
+  fi
+  pkill -f "darknius-thermal __daemon" 2>/dev/null || true
+}
+
+start_engine() {
+  stop_daemon_only
+  load_conf
+  save_conf_key "ENABLED" "1"
+  load_conf
+
+  if [ "$MODE" = "static" ]; then
+    apply_thermal_profile "$AGGRESSIVE" "$ZPOLICY" "$ZONE_MODE" "$DISABLE_HAL"
+    echo "active|STATIC" > "$STATE_FILE"
+  else
+    echo "standby|" > "$STATE_FILE"
+  fi
+  [ "$DISABLE_PANIC" = "1" ] && apply_panic_tuning "1"
+
+  nohup sh "$0" __daemon >/dev/null 2>&1 &
+  echo "[Thermal Killer] Engine started (${MODE} mode)."
+}
+
+disable_engine() {
+  save_conf_key "ENABLED" "0"
+  stop_daemon_only
+  restore_fast_charge
+  restore_stock_thermal
+  echo "stock|" > "$STATE_FILE"
+  echo "[Thermal Killer] Stock thermal limits restored."
+}
+
+json_esc() {
+  printf '%s' "$1" | sed 's/\\/\\\\/g;s/"/\\"/g' | tr -d '\r\n'
+}
+
+print_status_json() {
+  load_conf
+  local pid=""
+  if [ -f "$PID_FILE" ]; then
+    local cpid
+    cpid=$(cat "$PID_FILE" 2>/dev/null)
+    kill -0 "$cpid" 2>/dev/null && pid="$cpid"
+  fi
+
+  local st="stock"
+  local apkg=""
+  if [ -f "$STATE_FILE" ]; then
+    st=$(cut -d'|' -f1 "$STATE_FILE" 2>/dev/null)
+    apkg=$(cut -d'|' -f2 "$STATE_FILE" 2>/dev/null)
+  fi
+  if [ "$ENABLED" != "1" ]; then
+    st="stock"
+    apkg=""
+  elif [ "$MODE" = "static" ]; then
+    st="active"
+    apkg="STATIC"
+  elif [ -z "$st" ]; then
+    st="standby"
+  fi
+
+  local badge="Stock"
+  if [ "$st" = "active" ]; then
+    if [ "$MODE" = "static" ] || [ "$apkg" = "STATIC" ]; then
+      badge="Active (Static)"
+    elif [ -n "$apkg" ]; then
+      badge="Active (Auto)"
+    else
+      badge="Active"
+    fi
+  elif [ "$st" = "standby" ] || [ "$ENABLED" = "1" ]; then
+    badge="Standby (Auto)"
+  fi
+
+  local avail_pol="stepwise userspace power_allocator"
+  [ -f /sys/class/thermal/thermal_zone0/available_policies ] && avail_pol=$(cat /sys/class/thermal/thermal_zone0/available_policies 2>/dev/null | tr '\n' ' ')
+  local cur_pol="$ZPOLICY"
+  [ -z "$cur_pol" ] && [ -f /sys/class/thermal/thermal_zone0/policy ] && cur_pol=$(cat /sys/class/thermal/thermal_zone0/policy 2>/dev/null | tr -d '\r\n')
+  [ -z "$cur_pol" ] && cur_pol="stepwise"
+
+  local fc_sup
+  fc_sup=$(is_fast_charge_supported)
+
+  local apps_csv=""
+  [ -f "$APPS_FILE" ] && apps_csv=$(grep -v '^[[:space:]]*$' "$APPS_FILE" 2>/dev/null | tr '\n' ',' | sed 's/,$//')
+
+  local app_confs_raw=""
+  [ -f "$APP_CONFS_FILE" ] && app_confs_raw=$(grep -v '^[[:space:]]*$' "$APP_CONFS_FILE" 2>/dev/null | tr '\n' ';' | sed 's/;$//')
+
+  printf '{"status":"ok","enabled":%s,"state":"%s","badge":"%s","active_pkg":"%s","pid":"%s","mode":"%s","aggressive":"%s","disable_hal":"%s","disable_panic":"%s","zone_mode":"%s","policy":"%s","available_policies":"%s","fast_charge":"%s","fast_charge_supported":"%s","apps":"%s","app_configs":"%s"}\n' \
+    "$ENABLED" \
+    "$(json_esc "$st")" \
+    "$(json_esc "$badge")" \
+    "$(json_esc "$apkg")" \
+    "$(json_esc "$pid")" \
+    "$(json_esc "$MODE")" \
+    "$(json_esc "$AGGRESSIVE")" \
+    "$(json_esc "$DISABLE_HAL")" \
+    "$(json_esc "$DISABLE_PANIC")" \
+    "$(json_esc "$ZONE_MODE")" \
+    "$(json_esc "$cur_pol")" \
+    "$(json_esc "$avail_pol")" \
+    "$(json_esc "$FAST_CHARGE")" \
+    "$(json_esc "$fc_sup")" \
+    "$(json_esc "$apps_csv")" \
+    "$(json_esc "$app_confs_raw")"
+}
+
+print_short_badge() {
+  load_conf
+  local st="stock"
+  [ -f "$STATE_FILE" ] && st=$(cut -d'|' -f1 "$STATE_FILE" 2>/dev/null)
+  if [ "$ENABLED" != "1" ]; then
+    echo "Stock"
+  elif [ "$MODE" = "static" ] || [ "$st" = "active" ]; then
+    [ "$MODE" = "static" ] && echo "Active (Static)" || echo "Active (Auto)"
+  else
+    echo "Standby (Auto)"
+  fi
 }
 
 case "$1" in
-  enable|on)
-    enable_thermal_killer
+  __daemon)
+    daemon_loop
     ;;
-  disable|off)
-    disable_thermal_killer
+  enable|on|start)
+    start_engine
+    ;;
+  disable|off|stop)
+    disable_engine
+    ;;
+  boot)
+    load_conf
+    if [ "$ENABLED" = "1" ]; then
+      start_engine >/dev/null 2>&1
+    fi
+    ;;
+  set)
+    key="$2"
+    val="$3"
+    load_conf
+    case "$key" in
+      MODE|AGGRESSIVE|DISABLE_HAL|DISABLE_PANIC|ZONE_MODE|ZPOLICY|FAST_CHARGE)
+        save_conf_key "$key" "$val"
+        if [ "$key" = "DISABLE_PANIC" ]; then
+          apply_panic_tuning "$val"
+        elif [ "$key" = "ZPOLICY" ] && [ -n "$val" ]; then
+          apply_zone_policy "$val"
+        fi
+        load_conf
+        if [ "$ENABLED" = "1" ] && [ "$MODE" = "static" ]; then
+          apply_thermal_profile "$AGGRESSIVE" "$ZPOLICY" "$ZONE_MODE" "$DISABLE_HAL"
+        fi
+        echo "[Thermal Killer] Updated ${key}=${val}"
+        ;;
+      *)
+        echo "Invalid config key: $key"
+        exit 1
+        ;;
+    esac
+    ;;
+  app-add)
+    pkg="$2"
+    [ -n "$pkg" ] || exit 1
+    init_defaults
+    grep -qxF "$pkg" "$APPS_FILE" 2>/dev/null || echo "$pkg" >> "$APPS_FILE"
+    echo "[Thermal Killer] Added $pkg to Auto target apps."
+    ;;
+  app-remove)
+    pkg="$2"
+    [ -n "$pkg" ] || exit 1
+    [ -f "$APPS_FILE" ] && sed -i "\|^${pkg}$|d" "$APPS_FILE"
+    [ -f "$APP_CONFS_FILE" ] && sed -i "\|^${pkg}:|d" "$APP_CONFS_FILE"
+    echo "[Thermal Killer] Removed $pkg from Auto target apps."
+    ;;
+  app-config)
+    # pkg agg policy zone hal
+    pkg="$2"; agg="$3"; pol="$4"; zone="$5"; hal="$6"
+    [ -n "$pkg" ] || exit 1
+    init_defaults
+    grep -qxF "$pkg" "$APPS_FILE" 2>/dev/null || echo "$pkg" >> "$APPS_FILE"
+    sed -i "\|^${pkg}:|d" "$APP_CONFS_FILE" 2>/dev/null || true
+    echo "${pkg}:${agg}:${pol}:${zone}:${hal}" >> "$APP_CONFS_FILE"
+    echo "[Thermal Killer] Saved custom config for $pkg."
+    ;;
+  app-config-clear)
+    pkg="$2"
+    [ -n "$pkg" ] && [ -f "$APP_CONFS_FILE" ] && sed -i "\|^${pkg}:|d" "$APP_CONFS_FILE"
+    echo "[Thermal Killer] Reset $pkg to global thermal config."
+    ;;
+  status-json)
+    print_status_json
+    ;;
+  status-badge)
+    print_short_badge
     ;;
   status)
-    echo "Darknius Thermal Killer: $(get_status)"
+    echo "Darknius Thermal Killer: $(print_short_badge)"
     ;;
   *)
-    echo "Usage: darknius-thermal {enable|disable|status}"
+    echo "Usage: darknius-thermal {enable|disable|set <KEY> <VAL>|app-add <pkg>|app-remove <pkg>|app-config <pkg> <agg> <pol> <zone> <hal>|status|status-json}"
     ;;
 esac

@@ -62,6 +62,22 @@ case "$1" in
   disable|off)
     disable_lod
     ;;
+  status-badge)
+    prop_val=$(getprop debug.angle.feature_overrides_enabled 2>/dev/null)
+    sel_pkg=$(cmd settings get global angle_gl_driver_selection_pkgs 2>/dev/null)
+    all_angle=$(cmd settings get global angle_gl_driver_all_angle 2>/dev/null)
+    if [ -n "$prop_val" ] && [ "$prop_val" != '""' ]; then
+      if [ "$all_angle" = "1" ]; then
+        echo "Global Active"
+      elif [ -n "$sel_pkg" ] && [ "$sel_pkg" != "null" ]; then
+        echo "App Active"
+      else
+        echo "Active"
+      fi
+    else
+      echo "Disabled"
+    fi
+    ;;
   status)
     echo "Pixel LOD Scaler (Grafik MC): $(get_status)"
     ;;
